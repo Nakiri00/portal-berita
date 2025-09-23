@@ -3,7 +3,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, UserPlus } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { toast } from 'sonner';
+import { ForgotPasswordDialog } from './ForgotPasswordDialog';
 
 interface LoginDialogProps {
   isOpen: boolean;
@@ -12,51 +15,138 @@ interface LoginDialogProps {
 }
 
 export function LoginDialog({ isOpen, onClose, onLoginSuccess }: LoginDialogProps) {
+  const { login, register, loading } = useAuth();
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const resetForm = () => {
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setName('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setIsSubmitting(false);
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple demo validation - in production, this would be handled by backend
-    if (email && password) {
-      console.log('Login successful:', { email });
-      onLoginSuccess(false);
-      // Reset form
-      setEmail('');
-      setPassword('');
-    } else {
-      alert('Mohon lengkapi email dan password');
+    
+    if (!email || !password) {
+      toast.error('Mohon lengkapi email dan password');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await login(email, password);
+      if (result.success) {
+        toast.success('Login berhasil!');
+        onLoginSuccess();
+        resetForm();
+        onClose();
+      } else {
+        toast.error(result.message || 'Login gagal');
+      }
+    } catch (error) {
+      toast.error('Terjadi kesalahan saat login');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name || !email || !password || !confirmPassword) {
+      toast.error('Mohon lengkapi semua field');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error('Password dan konfirmasi password tidak sama');
+      return;
+    }
+
+    if (password.length < 6) {
+      toast.error('Password minimal 6 karakter');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await register(name, email, password, 'user');
+      if (result.success) {
+        toast.success('Registrasi berhasil! Selamat datang!');
+        onLoginSuccess();
+        resetForm();
+        onClose();
+      } else {
+        toast.error(result.message || 'Registrasi gagal');
+      }
+    } catch (error) {
+      toast.error('Terjadi kesalahan saat registrasi');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleSocialLogin = (provider: string) => {
     console.log(`Login with ${provider}`);
-    onLoginSuccess(false);
-    // Reset form
-    setEmail('');
-    setPassword('');
+    onLoginSuccess();
+    resetForm();
   };
 
   const handleWriterLogin = () => {
     console.log('Writer login with Google');
     onLoginSuccess(true);
-    // Reset form
-    setEmail('');
-    setPassword('');
+    resetForm();
+  };
+
+  const toggleMode = () => {
+    setIsRegisterMode(!isRegisterMode);
+    resetForm();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md max-w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-2 pb-4">
-          <DialogTitle className="text-center text-lg sm:text-xl">Masuk ke Kamus Mahasiswa</DialogTitle>
+          <DialogTitle className="text-center text-lg sm:text-xl">
+            {isRegisterMode ? 'Daftar Akun Baru' : 'Masuk ke Kamus Mahasiswa'}
+          </DialogTitle>
           <DialogDescription className="text-center text-sm text-muted-foreground">
-            Masuk untuk mengakses fitur lengkap portal berita mahasiswa
+            {isRegisterMode 
+              ? 'Buat akun untuk mengakses fitur lengkap portal berita mahasiswa'
+              : 'Masuk untuk mengakses fitur lengkap portal berita mahasiswa'
+            }
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleLogin} className="space-y-3 sm:space-y-4">
+        <form onSubmit={isRegisterMode ? handleRegister : handleLogin} className="space-y-3 sm:space-y-4">
+          {/* Name Input - Only for registration */}
+          {isRegisterMode && (
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-sm">Nama Lengkap</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Masukkan nama lengkap"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                className="h-10"
+              />
+            </div>
+          )}
+
           {/* Email Input */}
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm">Email</Label>
@@ -78,11 +168,12 @@ export function LoginDialog({ isOpen, onClose, onLoginSuccess }: LoginDialogProp
               <Input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Masukkan password"
+                placeholder={isRegisterMode ? "Minimal 6 karakter" : "Masukkan password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="h-10 pr-10"
+                minLength={isRegisterMode ? 6 : undefined}
               />
               <button
                 type="button"
@@ -94,32 +185,88 @@ export function LoginDialog({ isOpen, onClose, onLoginSuccess }: LoginDialogProp
             </div>
           </div>
 
-          {/* Forgot Password */}
-          <div className="text-right">
+          {/* Confirm Password Input - Only for registration */}
+          {isRegisterMode && (
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="text-sm">Konfirmasi Password</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="Ulangi password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="h-10 pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Forgot Password - Only for login */}
+          {!isRegisterMode && (
+            <div className="text-right">
+              <button
+                type="button"
+                className="text-xs sm:text-sm text-blue-600 hover:text-blue-800"
+                onClick={() => setShowForgotPassword(true)}
+              >
+                Lupa password?
+              </button>
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <Button 
+            type="submit" 
+            className="w-full h-10" 
+            disabled={isSubmitting || loading}
+          >
+            {isSubmitting ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                {isRegisterMode ? 'Mendaftar...' : 'Masuk...'}
+              </div>
+            ) : (
+              isRegisterMode ? 'Daftar' : 'Masuk'
+            )}
+          </Button>
+
+          {/* Toggle between Login and Register */}
+          <div className="text-center py-2">
             <button
               type="button"
-              className="text-xs sm:text-sm text-blue-600 hover:text-blue-800"
+              onClick={toggleMode}
+              className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-2 mx-auto"
             >
-              Lupa password?
+              <UserPlus className="h-4 w-4" />
+              {isRegisterMode ? 'Sudah punya akun? Masuk' : 'Belum punya akun? Daftar'}
             </button>
           </div>
 
-          {/* Login Button */}
-          <Button type="submit" className="w-full h-10">
-            Masuk
-          </Button>
+          {!isRegisterMode && (
+            <>
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-muted-foreground">atau</span>
+                </div>
+              </div>
+            </>
+          )}
 
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-muted-foreground">atau</span>
-            </div>
-          </div>
-
-          {/* Social Login */}
-          <div className="space-y-2">
+          {/* Social Login - Only for login mode */}
+          {!isRegisterMode && (
+            <div className="space-y-2">
             <Button
               type="button"
               variant="outline"
@@ -195,9 +342,20 @@ export function LoginDialog({ isOpen, onClose, onLoginSuccess }: LoginDialogProp
               </svg>
               <span className="truncate">Masuk sebagai Penulis dengan Google</span>
             </Button>
-          </div>
+            </div>
+          )}
         </form>
       </DialogContent>
+      
+      {/* Forgot Password Dialog */}
+      <ForgotPasswordDialog
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+        onSuccess={() => {
+          setShowForgotPassword(false);
+          toast.success('Link reset password telah dikirim ke email Anda');
+        }}
+      />
     </Dialog>
   );
 }

@@ -11,6 +11,8 @@ import { TipsTrikPage } from './pages/TipsTrikPage';
 import { TentangPage } from './pages/TentangPage';
 import { HubungiKamiPage } from './pages/HubungiKamiPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { AdminPage } from './pages/AdminPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import { LoginDialog } from './components/LoginDialog';
 import { Footer } from './components/Footer';
 import { Breadcrumb } from './components/Breadcrumb';
@@ -25,7 +27,6 @@ function AppContent() {
     userProfile, 
     readingHistory, 
     savedArticles, 
-    login, 
     logout, 
     updateProfile 
   } = useAuth();
@@ -40,8 +41,7 @@ function AppContent() {
     setIsLoginDialogOpen(false);
   };
 
-  const handleLoginSuccess = (asWriter: boolean = false) => {
-    login(asWriter);
+  const handleLoginSuccess = () => {
     setIsLoginDialogOpen(false);
   };
 
@@ -61,7 +61,7 @@ function AppContent() {
         onLogout={logout}
         isLoggedIn={isLoggedIn}
         isWriter={isWriter}
-        userProfile={userProfile}
+        userProfile={userProfile!}
         readingHistory={readingHistory}
         savedArticles={savedArticles}
         onUpdateProfile={updateProfile}
@@ -80,7 +80,7 @@ function AppContent() {
             element={
               isLoggedIn ? (
                 <MyAccountPage 
-                  userProfile={userProfile} 
+                  userProfile={userProfile!} 
                   onUpdateProfile={updateProfile}
                   isWriter={isWriter}
                 />
@@ -104,6 +104,8 @@ function AppContent() {
           <Route path="/tips-trik" element={<TipsTrikPage />} />
           <Route path="/tentang" element={<TentangPage />} />
           <Route path="/hubungi-kami" element={<HubungiKamiPage />} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

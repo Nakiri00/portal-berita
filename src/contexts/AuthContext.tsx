@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface UserProfile {
+  _id: string;
   name: string;
   email: string;
   avatar: string;
@@ -9,6 +10,7 @@ interface UserProfile {
   instagram?: string;
   facebook?: string;
   threads?: string;
+  role?: 'user' | 'writer' | 'admin';
 }
 
 interface ReadHistory {
@@ -31,14 +33,17 @@ interface SavedArticle {
 interface AuthContextType {
   isLoggedIn: boolean;
   isWriter: boolean;
-  userProfile: UserProfile;
+  userProfile: UserProfile | null;
   followedAuthors: string[];
   readingHistory: ReadHistory[];
   savedArticles: SavedArticle[];
   writerArticles: any[];
-  login: (asWriter?: boolean) => void;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
+  register: (name: string, email: string, password: string, role?: 'user' | 'writer') => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
-  updateProfile: (profile: UserProfile) => void;
+  updateProfile: (profile: Partial<UserProfile>) => Promise<{ success: boolean; message?: string }>;
+  forgotPassword: (email: string) => Promise<{ success: boolean; message?: string; resetLink?: string }>;
   followAuthor: (authorId: string) => void;
   unfollowAuthor: (authorId: string) => void;
   isFollowing: (authorId: string) => boolean;
@@ -53,48 +58,218 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// API Base URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isWriter, setIsWriter] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [followedAuthors, setFollowedAuthors] = useState<string[]>([]);
   const [readingHistory, setReadingHistory] = useState<ReadHistory[]>([]);
   const [savedArticles, setSavedArticles] = useState<SavedArticle[]>([]);
   const [writerArticles, setWriterArticles] = useState<any[]>([]);
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: 'Ahmad Rizki',
-    email: 'ahmad.rizki@email.com',
-    avatar: '',
-    bio: 'Mahasiswa aktif yang tertarik dengan teknologi dan pendidikan',
-    joinDate: '15 Jan 2024',
-    instagram: '',
-    facebook: '',
-    threads: ''
-  });
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
-  const login = (asWriter: boolean = false) => {
-    setIsLoggedIn(true);
-    setIsWriter(asWriter);
-    
-    // Update profile based on user type
-    if (asWriter) {
-      setUserProfile(prev => ({
-        ...prev,
-        name: prev.name || 'Penulis Kamus Mahasiswa'
-      }));
+  // Load user data from localStorage on component mount
+  useEffect(() => {
+    const savedToken = localStorage.getItem('portal_token');
+    if (savedToken) {
+      // Verify token with API
+      verifyToken(savedToken);
+    }
+  }, []);
+
+  // Helper function to get auth headers
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('portal_token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : '',
+    };
+  };
+
+  // Verify token with API
+  const verifyToken = async (token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setUserProfile({
+            ...data.data.user,
+            joinDate: new Date(data.data.user.createdAt).toLocaleDateString('id-ID')
+          });
+          setIsLoggedIn(true);
+          setIsWriter(data.data.user.role === 'writer' || data.data.user.role === 'admin');
+        }
+      } else {
+        // Token invalid, remove it
+        localStorage.removeItem('portal_token');
+      }
+    } catch (error) {
+      console.error('Token verification failed:', error);
+      localStorage.removeItem('portal_token');
+    }
+  };
+
+  // Login function with real API
+  const login = async (email: string, password: string) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Store token
+        localStorage.setItem('portal_token', data.data.token);
+        
+        // Set user data
+        setUserProfile({
+          ...data.data.user,
+          joinDate: new Date(data.data.user.createdAt).toLocaleDateString('id-ID')
+        });
+        setIsLoggedIn(true);
+        setIsWriter(data.data.user.role === 'writer' || data.data.user.role === 'admin');
+        
+        return { success: true };
+      } else {
+        return { success: false, message: data.message };
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, message: 'Terjadi kesalahan saat login' };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Register function with real API
+  const register = async (name: string, email: string, password: string, role: 'user' | 'writer' = 'user') => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, password, role }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Store token
+        localStorage.setItem('portal_token', data.data.token);
+        
+        // Set user data
+        setUserProfile({
+          ...data.data.user,
+          joinDate: new Date(data.data.user.createdAt).toLocaleDateString('id-ID')
+        });
+        setIsLoggedIn(true);
+        setIsWriter(data.data.user.role === 'writer' || data.data.user.role === 'admin');
+        
+        return { success: true };
+      } else {
+        return { success: false, message: data.message };
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      return { success: false, message: 'Terjadi kesalahan saat registrasi' };
+    } finally {
+      setLoading(false);
     }
   };
 
   const logout = () => {
+    // Call logout API
+    fetch(`${API_BASE_URL}/auth/logout`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    }).catch(error => console.error('Logout API error:', error));
+
+    // Clear local state
+    localStorage.removeItem('portal_token');
     setIsLoggedIn(false);
     setIsWriter(false);
+    setUserProfile(null);
     setFollowedAuthors([]);
     setReadingHistory([]);
     setSavedArticles([]);
     setWriterArticles([]);
   };
 
-  const updateProfile = (profile: UserProfile) => {
-    setUserProfile(profile);
+  const updateProfile = async (profile: Partial<UserProfile>) => {
+    if (!userProfile) return { success: false, message: 'User not logged in' };
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(profile),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUserProfile({
+          ...data.data.user,
+          joinDate: new Date(data.data.user.createdAt).toLocaleDateString('id-ID')
+        });
+        return { success: true };
+      } else {
+        return { success: false, message: data.message };
+      }
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return { success: false, message: 'Terjadi kesalahan saat memperbarui profil' };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const forgotPassword = async (email: string) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/password/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        return { 
+          success: true, 
+          message: data.message,
+          resetLink: data.resetLink 
+        };
+      } else {
+        return { success: false, message: data.message };
+      }
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      return { success: false, message: 'Terjadi kesalahan saat mengirim link reset password' };
+    } finally {
+      setLoading(false);
+    }
   };
 
   const followAuthor = (authorId: string) => {
@@ -153,10 +328,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const addWriterArticle = (article: any) => {
+    if (!userProfile) return;
+    
     const newArticle = {
       ...article,
       id: Date.now().toString(),
-      authorId: 'writer-1', // Current writer's ID
+      authorId: userProfile._id,
       author: userProfile.name,
       publishDate: new Date().toISOString(),
       status: 'published'
@@ -187,9 +364,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       readingHistory,
       savedArticles,
       writerArticles,
+      loading,
       login,
+      register,
       logout,
       updateProfile,
+      forgotPassword,
       followAuthor,
       unfollowAuthor,
       isFollowing,

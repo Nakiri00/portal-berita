@@ -1,7 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { HomePage as HomePageComponent } from '../components/HomePage';
 import { useArticles } from '../contexts/ArticleContext';
-import { useAuth } from '../contexts/AuthContext';
 
 export function HomePage() {
   const navigate = useNavigate();
