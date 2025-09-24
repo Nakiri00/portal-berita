@@ -10,6 +10,7 @@ import { BeritaTerkiniPage } from './pages/BeritaTerkiniPage';
 import { TipsTrikPage } from './pages/TipsTrikPage';
 import { TentangPage } from './pages/TentangPage';
 import { HubungiKamiPage } from './pages/HubungiKamiPage';
+import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { AdminPage } from './pages/AdminPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -106,6 +107,7 @@ function AppContent() {
           <Route path="/hubungi-kami" element={<HubungiKamiPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

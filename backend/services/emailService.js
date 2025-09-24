@@ -14,62 +14,103 @@ const createTransporter = () => {
 // Send reset password email
 const sendResetPasswordEmail = async (email, resetLink, userName) => {
   try {
+    // Check if email is properly configured
+    if (!process.env.EMAIL_USER || process.env.EMAIL_USER === 'your-email@gmail.com' || 
+        !process.env.EMAIL_PASSWORD || process.env.EMAIL_PASSWORD === 'your-app-password') {
+      console.log('⚠️  Email not configured. Reset link:', resetLink);
+      return { 
+        success: true, 
+        messageId: 'dev-mode',
+        message: 'Email not configured - running in development mode. Reset link logged to console.'
+      };
+    }
+
     const transporter = createTransporter();
     
     const mailOptions = {
-      from: `"Portal Berita Mahasiswa" <${process.env.EMAIL_USER || 'your-email@gmail.com'}>`,
+      from: `"Kamus Mahasiswa" <${process.env.EMAIL_USER || 'your-email@gmail.com'}>`,
       to: email,
-      subject: 'Reset Password - Portal Berita Mahasiswa',
+      subject: 'Reset Password - Kamus Mahasiswa',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center;">
-            <h1 style="color: white; margin: 0;">Portal Berita Mahasiswa</h1>
-            <p style="color: white; margin: 5px 0 0 0;">Reset Password</p>
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+          <!-- Header dengan Logo Kamus Mahasiswa -->
+          <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%); padding: 25px; text-align: center; position: relative;">
+            <div style="background: white; border-radius: 50%; width: 80px; height: 80px; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+              <div style="font-size: 32px; font-weight: bold; color: #1e40af; text-align: center; line-height: 1;">
+                📚<br><span style="font-size: 8px; display: block; margin-top: -2px;">MAHASISWA</span>
+              </div>
+            </div>
+            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Kamus Mahasiswa</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Portal Berita & Informasi Kampus</p>
           </div>
           
-          <div style="padding: 30px; background: #f9f9f9;">
-            <h2 style="color: #333; margin-top: 0;">Halo ${userName}!</h2>
-            
-            <p style="color: #666; line-height: 1.6;">
-              Kami menerima permintaan untuk mereset password akun Anda di Portal Berita Mahasiswa.
-            </p>
-            
-            <p style="color: #666; line-height: 1.6;">
-              Klik tombol di bawah ini untuk mereset password Anda:
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetLink}" 
-                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                        color: white; 
-                        padding: 15px 30px; 
-                        text-decoration: none; 
-                        border-radius: 5px; 
-                        display: inline-block;
-                        font-weight: bold;">
-                Reset Password
-              </a>
+          <div style="padding: 35px; background: #f8fafc;">
+            <div style="text-align: center; margin-bottom: 25px;">
+              <h2 style="color: #1e293b; margin: 0; font-size: 22px; font-weight: 600;">Reset Password Anda</h2>
+              <p style="color: #64748b; margin: 8px 0 0 0; font-size: 16px;">Halo, <strong>${userName}</strong>!</p>
             </div>
             
-            <p style="color: #666; line-height: 1.6; font-size: 14px;">
-              Atau copy dan paste link berikut di browser Anda:<br>
-              <a href="${resetLink}" style="color: #667eea; word-break: break-all;">${resetLink}</a>
-            </p>
-            
-            <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
-              <p style="color: #856404; margin: 0; font-size: 14px;">
-                <strong>⚠️ Penting:</strong> Link ini akan berlaku selama 1 jam. Jika Anda tidak meminta reset password, abaikan email ini.
+            <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 25px;">
+              <p style="color: #475569; line-height: 1.7; margin: 0 0 15px 0; font-size: 15px;">
+                Kami menerima permintaan untuk mereset password akun Kamus Mahasiswa Anda. Jika Anda tidak meminta ini, Anda dapat mengabaikan email ini dengan aman.
+              </p>
+              
+              <p style="color: #475569; line-height: 1.7; margin: 0 0 20px 0; font-size: 15px;">
+                Untuk membuat password baru, klik tombol di bawah ini:
+              </p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${resetLink}" 
+                   style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); 
+                          color: white; 
+                          padding: 16px 32px; 
+                          text-decoration: none; 
+                          border-radius: 8px; 
+                          display: inline-block;
+                          font-weight: 600;
+                          font-size: 15px;
+                          box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+                          transition: all 0.3s ease;">
+                  🔐 Reset Password
+                </a>
+              </div>
+              
+              <div style="background: #f1f5f9; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                <p style="color: #475569; margin: 0; font-size: 14px; line-height: 1.6;">
+                  <strong>💡 Tips Keamanan:</strong><br>
+                  • Gunakan password yang kuat dengan kombinasi huruf, angka, dan simbol<br>
+                  • Jangan bagikan password dengan siapa pun<br>
+                  • Ganti password secara berkala untuk keamanan akun Anda
+                </p>
+              </div>
+              
+              <p style="color: #64748b; line-height: 1.6; font-size: 14px; margin: 20px 0 0 0;">
+                <strong>Link alternatif:</strong><br>
+                <a href="${resetLink}" style="color: #3b82f6; word-break: break-all; text-decoration: underline;">${resetLink}</a>
               </p>
             </div>
             
-            <p style="color: #666; line-height: 1.6; font-size: 14px;">
-              Jika tombol tidak berfungsi, copy dan paste link di atas ke browser Anda.
-            </p>
+            <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+              <p style="color: #92400e; margin: 0; font-size: 14px; line-height: 1.5;">
+                <strong>⏰ Waktu Terbatas:</strong> Link reset password ini akan berlaku selama <strong>1 jam</strong>. Jika link sudah expired, Anda dapat meminta link baru melalui halaman login.
+              </p>
+            </div>
+            
+            <div style="text-align: center; padding: 20px; background: #f8fafc; border-radius: 8px;">
+              <p style="color: #64748b; margin: 0; font-size: 13px; line-height: 1.5;">
+                <strong>Butuh bantuan?</strong> Hubungi tim support kami di <a href="mailto:support@kamusammahasiswa.com" style="color: #3b82f6;">support@kamusammahasiswa.com</a>
+              </p>
+            </div>
           </div>
           
-          <div style="background: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
-            <p style="margin: 0;">© 2025 Portal Berita Mahasiswa. Semua hak dilindungi.</p>
-            <p style="margin: 5px 0 0 0;">Email ini dikirim secara otomatis, mohon tidak membalas.</p>
+          <div style="background: #1e293b; color: white; padding: 20px; text-align: center; font-size: 12px;">
+            <p style="margin: 0; color: #94a3b8;">© 2025 Kamus Mahasiswa - Portal Berita & Informasi Kampus</p>
+            <p style="margin: 8px 0 0 0; color: #64748b;">Email ini dikirim secara otomatis, mohon tidak membalas email ini.</p>
+            <div style="margin-top: 15px;">
+              <a href="#" style="color: #60a5fa; text-decoration: none; margin: 0 10px; font-size: 11px;">Kebijakan Privasi</a>
+              <a href="#" style="color: #60a5fa; text-decoration: none; margin: 0 10px; font-size: 11px;">Syarat & Ketentuan</a>
+              <a href="#" style="color: #60a5fa; text-decoration: none; margin: 0 10px; font-size: 11px;">Bantuan</a>
+            </div>
           </div>
         </div>
       `
@@ -88,53 +129,99 @@ const sendResetPasswordEmail = async (email, resetLink, userName) => {
 // Send welcome email
 const sendWelcomeEmail = async (email, userName) => {
   try {
+    // Check if email is properly configured
+    if (!process.env.EMAIL_USER || process.env.EMAIL_USER === 'your-email@gmail.com' || 
+        !process.env.EMAIL_PASSWORD || process.env.EMAIL_PASSWORD === 'your-app-password') {
+      console.log('⚠️  Email not configured. Welcome email for:', email);
+      return { 
+        success: true, 
+        messageId: 'dev-mode',
+        message: 'Email not configured - running in development mode.'
+      };
+    }
+
     const transporter = createTransporter();
     
     const mailOptions = {
-      from: `"Portal Berita Mahasiswa" <${process.env.EMAIL_USER || 'your-email@gmail.com'}>`,
+      from: `"Kamus Mahasiswa" <${process.env.EMAIL_USER || 'your-email@gmail.com'}>`,
       to: email,
-      subject: 'Selamat Datang di Portal Berita Mahasiswa!',
+      subject: 'Selamat Datang di Kamus Mahasiswa! 🎓',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center;">
-            <h1 style="color: white; margin: 0;">Portal Berita Mahasiswa</h1>
-            <p style="color: white; margin: 5px 0 0 0;">Selamat Datang!</p>
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+          <!-- Header dengan Logo Kamus Mahasiswa -->
+          <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%); padding: 25px; text-align: center; position: relative;">
+            <div style="background: white; border-radius: 50%; width: 80px; height: 80px; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+              <div style="font-size: 32px; font-weight: bold; color: #1e40af; text-align: center; line-height: 1;">
+                📚<br><span style="font-size: 8px; display: block; margin-top: -2px;">MAHASISWA</span>
+              </div>
+            </div>
+            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Kamus Mahasiswa</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Portal Berita & Informasi Kampus</p>
           </div>
           
-          <div style="padding: 30px; background: #f9f9f9;">
-            <h2 style="color: #333; margin-top: 0;">Halo ${userName}!</h2>
+          <div style="padding: 35px; background: #f8fafc;">
+            <div style="text-align: center; margin-bottom: 25px;">
+              <h2 style="color: #1e293b; margin: 0; font-size: 22px; font-weight: 600;">🎉 Selamat Datang!</h2>
+              <p style="color: #64748b; margin: 8px 0 0 0; font-size: 16px;">Halo, <strong>${userName}</strong>!</p>
+            </div>
             
-            <p style="color: #666; line-height: 1.6;">
-              Selamat! Akun Anda telah berhasil dibuat di Portal Berita Mahasiswa.
-            </p>
+            <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 25px;">
+              <p style="color: #475569; line-height: 1.7; margin: 0 0 20px 0; font-size: 15px; text-align: center;">
+                🎓 <strong>Selamat bergabung di Kamus Mahasiswa!</strong><br>
+                Akun Anda telah berhasil dibuat dan siap digunakan.
+              </p>
+              
+              <div style="background: #f1f5f9; border-left: 4px solid #3b82f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #1e40af; margin: 0 0 15px 0; font-size: 16px;">🚀 Fitur yang dapat Anda nikmati:</h3>
+                <ul style="color: #475569; line-height: 1.8; margin: 0; padding-left: 20px;">
+                  <li><strong>📰 Berita Terkini</strong> - Dapatkan informasi terbaru dari kampus</li>
+                  <li><strong>💾 Simpan Artikel</strong> - Koleksi artikel favorit untuk dibaca nanti</li>
+                  <li><strong>👥 Ikuti Penulis</strong> - Follow penulis favorit Anda</li>
+                  <li><strong>💬 Diskusi Interaktif</strong> - Berpartisipasi dalam diskusi menarik</li>
+                  <li><strong>🔔 Notifikasi</strong> - Dapatkan notifikasi artikel terbaru</li>
+                </ul>
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}" 
+                   style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); 
+                          color: white; 
+                          padding: 16px 32px; 
+                          text-decoration: none; 
+                          border-radius: 8px; 
+                          display: inline-block;
+                          font-weight: 600;
+                          font-size: 15px;
+                          box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);">
+                  🎯 Mulai Jelajahi Kamus Mahasiswa
+                </a>
+              </div>
+              
+              <div style="background: #ecfdf5; border: 1px solid #10b981; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                <p style="color: #065f46; margin: 0; font-size: 14px; line-height: 1.5;">
+                  <strong>💡 Tips untuk Anda:</strong><br>
+                  • Lengkapi profil Anda untuk pengalaman yang lebih personal<br>
+                  • Aktifkan notifikasi untuk tidak ketinggalan berita terbaru<br>
+                  • Ikuti topik yang Anda minati untuk konten yang relevan
+                </p>
+              </div>
+            </div>
             
-            <p style="color: #666; line-height: 1.6;">
-              Sekarang Anda dapat:
-            </p>
-            
-            <ul style="color: #666; line-height: 1.8;">
-              <li>Membaca berita terkini dari kampus</li>
-              <li>Menyimpan artikel favorit</li>
-              <li>Mengikuti penulis favorit</li>
-              <li>Berpartisipasi dalam diskusi</li>
-            </ul>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}" 
-                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                        color: white; 
-                        padding: 15px 30px; 
-                        text-decoration: none; 
-                        border-radius: 5px; 
-                        display: inline-block;
-                        font-weight: bold;">
-                Mulai Jelajahi
-              </a>
+            <div style="text-align: center; padding: 20px; background: #f8fafc; border-radius: 8px;">
+              <p style="color: #64748b; margin: 0; font-size: 13px; line-height: 1.5;">
+                <strong>Ada pertanyaan?</strong> Tim support kami siap membantu di <a href="mailto:support@kamusammahasiswa.com" style="color: #3b82f6;">support@kamusammahasiswa.com</a>
+              </p>
             </div>
           </div>
           
-          <div style="background: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
-            <p style="margin: 0;">© 2025 Portal Berita Mahasiswa. Semua hak dilindungi.</p>
+          <div style="background: #1e293b; color: white; padding: 20px; text-align: center; font-size: 12px;">
+            <p style="margin: 0; color: #94a3b8;">© 2025 Kamus Mahasiswa - Portal Berita & Informasi Kampus</p>
+            <p style="margin: 8px 0 0 0; color: #64748b;">Selamat mengeksplorasi dunia kampus bersama kami!</p>
+            <div style="margin-top: 15px;">
+              <a href="#" style="color: #60a5fa; text-decoration: none; margin: 0 10px; font-size: 11px;">Kebijakan Privasi</a>
+              <a href="#" style="color: #60a5fa; text-decoration: none; margin: 0 10px; font-size: 11px;">Syarat & Ketentuan</a>
+              <a href="#" style="color: #60a5fa; text-decoration: none; margin: 0 10px; font-size: 11px;">Bantuan</a>
+            </div>
           </div>
         </div>
       `

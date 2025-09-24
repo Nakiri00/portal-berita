@@ -3,12 +3,16 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const session = require('express-session');
+const passport = require('./config/passport');
 const connectDB = require('./config/database');
 
 // Import routes
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const passwordRoutes = require('./routes/password');
+const oauthRoutes = require('./routes/oauth');
+const articleRoutes = require('./routes/articles');
 
 // Connect to MongoDB
 connectDB();
@@ -36,6 +40,21 @@ if (process.env.NODE_ENV === 'development') {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-super-secret-session-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Passport middleware
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
@@ -48,8 +67,10 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/oauth', oauthRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/password', passwordRoutes);
+app.use('/api/articles', articleRoutes);
 
 // 404 handler
 app.use((req, res) => {

@@ -41,6 +41,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   register: (name: string, email: string, password: string, role?: 'user' | 'writer') => Promise<{ success: boolean; message?: string }>;
+  loginWithToken: (token: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   updateProfile: (profile: Partial<UserProfile>) => Promise<{ success: boolean; message?: string }>;
   forgotPassword: (email: string) => Promise<{ success: boolean; message?: string; resetLink?: string }>;
@@ -189,6 +190,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Registration error:', error);
       return { success: false, message: 'Terjadi kesalahan saat registrasi' };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Login with token (for OAuth)
+  const loginWithToken = async (token: string) => {
+    setLoading(true);
+    try {
+      // Store token
+      localStorage.setItem('portal_token', token);
+      
+      // Verify token and get user data
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUserProfile({
+          ...data.data.user,
+          joinDate: new Date(data.data.user.createdAt).toLocaleDateString('id-ID')
+        });
+        setIsLoggedIn(true);
+        setIsWriter(data.data.user.role === 'writer' || data.data.user.role === 'admin');
+        
+        return { success: true };
+      } else {
+        localStorage.removeItem('portal_token');
+        return { success: false, message: data.message };
+      }
+    } catch (error) {
+      console.error('Token login error:', error);
+      localStorage.removeItem('portal_token');
+      return { success: false, message: 'Terjadi kesalahan saat login' };
     } finally {
       setLoading(false);
     }
@@ -367,6 +406,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       login,
       register,
+      loginWithToken,
       logout,
       updateProfile,
       forgotPassword,

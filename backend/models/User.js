@@ -21,9 +21,19 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Password harus diisi'],
     minlength: [6, 'Password minimal 6 karakter'],
     select: false // Jangan tampilkan password di response
+  },
+  // OAuth fields
+  googleId: {
+    type: String,
+    sparse: true, // Allows multiple null values
+    unique: true
+  },
+  facebookId: {
+    type: String,
+    sparse: true, // Allows multiple null values
+    unique: true
   },
   avatar: {
     type: String,

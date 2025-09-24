@@ -99,15 +99,39 @@ export function LoginDialog({ isOpen, onClose, onLoginSuccess }: LoginDialogProp
   };
 
   const handleSocialLogin = (provider: string) => {
-    console.log(`Login with ${provider}`);
-    onLoginSuccess();
-    resetForm();
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    
+    if (provider === 'Google') {
+      // Try development mode first, then production
+      window.location.href = `${apiUrl}/oauth/dev/google`;
+    } else if (provider === 'Facebook') {
+      // Try development mode first, then production
+      window.location.href = `${apiUrl}/oauth/dev/facebook`;
+    }
   };
 
-  const handleWriterLogin = () => {
-    console.log('Writer login with Google');
-    onLoginSuccess(true);
-    resetForm();
+  const handleWriterLogin = async () => {
+    if (!email || !password) {
+      toast.error('Mohon lengkapi email dan password');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await login(email, password);
+      if (result.success) {
+        toast.success('Login berhasil! Selamat datang kembali.');
+        onLoginSuccess(true);
+        resetForm();
+      } else {
+        toast.error(result.message || 'Login gagal');
+      }
+    } catch (error) {
+      console.error('Writer login error:', error);
+      toast.error('Terjadi kesalahan saat login');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const toggleMode = () => {
