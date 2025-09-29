@@ -20,6 +20,7 @@ export interface Article {
     email: string;
     avatar: string;
   };
+  bio?: string;
   authorName: string;
   category: string;
   tags: string[];
@@ -79,6 +80,7 @@ export const getAllArticles = async (params?: {
   category?: string;
   status?: string;
   search?: string;
+  tag?: string; 
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }): Promise<ArticlesResponse> => {
@@ -88,6 +90,7 @@ export const getAllArticles = async (params?: {
   if (params?.limit) queryParams.append('limit', params.limit.toString());
   if (params?.category) queryParams.append('category', params.category);
   if (params?.status) queryParams.append('status', params.status);
+  if (params?.tag) queryParams.append('tag', params.tag);
   if (params?.search) queryParams.append('search', params.search);
   if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
   if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);

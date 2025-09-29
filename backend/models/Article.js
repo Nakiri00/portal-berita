@@ -27,11 +27,24 @@ const articleSchema = new mongoose.Schema({
     required: [true, 'Nama author harus diisi']
   },
   category: {
-    type: String,
-    required: [true, 'Kategori harus diisi'],
-    enum: ['berita', 'tips-trik', 'opini', 'teknologi', 'pendidikan', 'olahraga', 'hiburan', 'lainnya'],
-    default: 'berita'
-  },
+    type: String,
+    required: [true, 'Kategori harus diisi'],
+    enum: [
+      'berita', 
+      'tips & trik', 
+      'opini', 
+      'teknologi', 
+      'pendidikan', 
+      'olahraga', 
+      'hiburan', 
+      'lainnya',
+      'akademik',
+      'kehidupan kampus',
+      'beasiswa',
+      'karir'
+    ],
+    default: 'berita'
+  },
   tags: [{
     type: String,
     trim: true,

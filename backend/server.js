@@ -6,13 +6,14 @@ const morgan = require('morgan');
 const session = require('express-session');
 const passport = require('./config/passport');
 const connectDB = require('./config/database');
-
+const errorMiddleware = require('./middleware/error');
 // Import routes
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const passwordRoutes = require('./routes/password');
 const oauthRoutes = require('./routes/oauth');
 const articleRoutes = require('./routes/articles');
+const userRoutes = require('./routes/users');
 
 // Connect to MongoDB
 connectDB();
@@ -22,6 +23,7 @@ const PORT = process.env.PORT || 5000;
 
 // Security middleware
 app.use(helmet());
+app.use(errorMiddleware);
 
 // CORS configuration
 const corsOptions = {
@@ -85,7 +87,7 @@ app.use('/api/oauth', oauthRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/password', passwordRoutes);
 app.use('/api/articles', articleRoutes);
-
+app.use('/api/user', userRoutes);
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({

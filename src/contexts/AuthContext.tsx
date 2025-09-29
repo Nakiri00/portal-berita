@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface UserProfile {
   _id: string;
@@ -33,6 +33,7 @@ interface SavedArticle {
 interface AuthContextType {
   isLoggedIn: boolean;
   isWriter: boolean;
+  isAdmin: boolean;
   userProfile: UserProfile | null;
   followedAuthors: string[];
   readingHistory: ReadHistory[];
@@ -65,6 +66,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isWriter, setIsWriter] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [followedAuthors, setFollowedAuthors] = useState<string[]>([]);
   const [readingHistory, setReadingHistory] = useState<ReadHistory[]>([]);
@@ -72,26 +74,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [writerArticles, setWriterArticles] = useState<any[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
-  // Load user data from localStorage on component mount
-  useEffect(() => {
-    const savedToken = localStorage.getItem('portal_token');
-    if (savedToken) {
-      // Verify token with API
-      verifyToken(savedToken);
-    }
-  }, []);
-
-  // Helper function to get auth headers
-  const getAuthHeaders = () => {
+  // Helper function to get auth headers (didefinisikan di awal karena digunakan di useEffect dan useCallback)
+  const getAuthHeaders = React.useCallback(() => {
     const token = localStorage.getItem('portal_token');
     return {
       'Content-Type': 'application/json',
       'Authorization': token ? `Bearer ${token}` : '',
     };
-  };
+  }, []);
 
-  // Verify token with API
-  const verifyToken = async (token: string) => {
+  // Verify token with API (didefinisikan di awal karena digunakan di useEffect)
+  const verifyToken = React.useCallback(async (token: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         headers: {
@@ -102,12 +95,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
+          const role = data.data.user.role;
+          
           setUserProfile({
             ...data.data.user,
             joinDate: new Date(data.data.user.createdAt).toLocaleDateString('id-ID')
           });
           setIsLoggedIn(true);
-          setIsWriter(data.data.user.role === 'writer' || data.data.user.role === 'admin');
+          
+          // LOGIKA ROLE DIPISAH
+          setIsAdmin(role === 'admin');
+          setIsWriter(role === 'writer' || role === 'admin');
         }
       } else {
         // Token invalid, remove it
@@ -117,10 +115,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Token verification failed:', error);
       localStorage.removeItem('portal_token');
     }
-  };
+  }, []); 
+
+  // Load user data from localStorage on component mount
+  useEffect(() => {
+    const savedToken = localStorage.getItem('portal_token');
+    if (savedToken) {
+      // Verify token with API
+      verifyToken(savedToken);
+    }
+  }, [verifyToken]); 
 
   // Login function with real API
-  const login = async (email: string, password: string) => {
+  const login = React.useCallback(async (email: string, password: string) => {
     setLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -138,12 +145,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('portal_token', data.data.token);
         
         // Set user data
+        const role = data.data.user.role; 
         setUserProfile({
           ...data.data.user,
           joinDate: new Date(data.data.user.createdAt).toLocaleDateString('id-ID')
         });
         setIsLoggedIn(true);
-        setIsWriter(data.data.user.role === 'writer' || data.data.user.role === 'admin');
+        
+        // LOGIKA ROLE DIPISAH
+        setIsAdmin(role === 'admin');
+        setIsWriter(role === 'writer' || role === 'admin');
         
         return { success: true };
       } else {
@@ -155,10 +166,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Register function with real API
-  const register = async (name: string, email: string, password: string, role: 'user' | 'writer' = 'user') => {
+  const register = React.useCallback(async (name: string, email: string, password: string, role: 'user' | 'writer' = 'user') => {
     setLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
@@ -176,12 +187,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('portal_token', data.data.token);
         
         // Set user data
+        const newRole = data.data.user.role; 
         setUserProfile({
           ...data.data.user,
           joinDate: new Date(data.data.user.createdAt).toLocaleDateString('id-ID')
         });
         setIsLoggedIn(true);
-        setIsWriter(data.data.user.role === 'writer' || data.data.user.role === 'admin');
+        
+        // LOGIKA ROLE DIPISAH
+        setIsAdmin(newRole === 'admin');
+        setIsWriter(newRole === 'writer' || newRole === 'admin');
         
         return { success: true };
       } else {
@@ -193,10 +208,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Login with token (for OAuth)
-  const loginWithToken = async (token: string) => {
+  const loginWithToken = React.useCallback(async (token: string) => {
     setLoading(true);
     try {
       // Store token
@@ -212,12 +227,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (data.success) {
+        const role = data.data.user.role; 
         setUserProfile({
           ...data.data.user,
           joinDate: new Date(data.data.user.createdAt).toLocaleDateString('id-ID')
         });
         setIsLoggedIn(true);
-        setIsWriter(data.data.user.role === 'writer' || data.data.user.role === 'admin');
+        
+        // LOGIKA ROLE DIPISAH
+        setIsAdmin(role === 'admin');
+        setIsWriter(role === 'writer' || role === 'admin');
         
         return { success: true };
       } else {
@@ -231,9 +250,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const logout = () => {
+  // FUNGSI LOGOUT DENGAN NAVIGASI KE HOME
+  const logout = React.useCallback(() => {
     // Call logout API
     fetch(`${API_BASE_URL}/auth/logout`, {
       method: 'POST',
@@ -244,14 +264,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('portal_token');
     setIsLoggedIn(false);
     setIsWriter(false);
+    setIsAdmin(false);
     setUserProfile(null);
     setFollowedAuthors([]);
     setReadingHistory([]);
     setSavedArticles([]);
     setWriterArticles([]);
-  };
+    
+    // PENGALIHAN KE HALAMAN UTAMA (/)
+    window.location.replace('/'); 
+  }, [getAuthHeaders]); 
 
-  const updateProfile = async (profile: Partial<UserProfile>) => {
+  const updateProfile = React.useCallback(async (profile: Partial<UserProfile>) => {
     if (!userProfile) return { success: false, message: 'User not logged in' };
     
     setLoading(true);
@@ -265,10 +289,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (data.success) {
+        const role = data.data.user.role; 
         setUserProfile({
           ...data.data.user,
           joinDate: new Date(data.data.user.createdAt).toLocaleDateString('id-ID')
         });
+        
+        // LOGIKA ROLE DIPISAH
+        setIsAdmin(role === 'admin');
+        setIsWriter(role === 'writer' || role === 'admin');
+        
         return { success: true };
       } else {
         return { success: false, message: data.message };
@@ -279,9 +309,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userProfile, getAuthHeaders]);
 
-  const forgotPassword = async (email: string) => {
+  const forgotPassword = React.useCallback(async (email: string) => {
     setLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/password/forgot-password`, {
@@ -309,21 +339,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const followAuthor = (authorId: string) => {
+  // Perbaikan: Pastikan fungsi-fungsi ini di-wrap dengan useCallback
+  const followAuthor = React.useCallback((authorId: string) => {
     setFollowedAuthors(prev => [...prev, authorId]);
-  };
+  }, []);
 
-  const unfollowAuthor = (authorId: string) => {
+  const unfollowAuthor = React.useCallback((authorId: string) => {
     setFollowedAuthors(prev => prev.filter(id => id !== authorId));
-  };
+  }, []);
 
-  const isFollowing = (authorId: string) => {
+  const isFollowing = React.useCallback((authorId: string) => {
     return followedAuthors.includes(authorId);
-  };
+  }, [followedAuthors]);
 
-  const addToReadingHistory = (articleId: string, title: string) => {
+  const addToReadingHistory = React.useCallback((articleId: string, title: string) => {
     setReadingHistory(prev => {
       const existingIndex = prev.findIndex(item => item.articleId === articleId);
       const now = new Date().toLocaleDateString('id-ID');
@@ -347,26 +378,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }, ...prev.slice(0, 49)]; // Keep only latest 50 items
       }
     });
-  };
+  }, []);
 
-  const saveArticle = (article: SavedArticle) => {
+  const saveArticle = React.useCallback((article: SavedArticle) => {
     setSavedArticles(prev => {
       if (prev.some(saved => saved.articleId === article.articleId)) {
         return prev; // Already saved
       }
       return [article, ...prev];
     });
-  };
+  }, []);
 
-  const unsaveArticle = (articleId: string) => {
+  const unsaveArticle = React.useCallback((articleId: string) => {
     setSavedArticles(prev => prev.filter(article => article.articleId !== articleId));
-  };
+  }, []);
 
-  const isArticleSaved = (articleId: string) => {
+  const isArticleSaved = React.useCallback((articleId: string) => {
     return savedArticles.some(article => article.articleId === articleId);
-  };
+  }, [savedArticles]);
 
-  const addWriterArticle = (article: any) => {
+  const addWriterArticle = React.useCallback((article: any) => {
     if (!userProfile) return;
     
     const newArticle = {
@@ -378,9 +409,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       status: 'published'
     };
     setWriterArticles(prev => [newArticle, ...prev]);
-  };
+  }, [userProfile]);
 
-  const updateWriterArticle = (articleId: string, updatedArticle: any) => {
+  const updateWriterArticle = React.useCallback((articleId: string, updatedArticle: any) => {
     setWriterArticles(prev => 
       prev.map(article => 
         article.id === articleId 
@@ -388,39 +419,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           : article
       )
     );
-  };
+  }, []);
 
-  const deleteWriterArticle = (articleId: string) => {
+  const deleteWriterArticle = React.useCallback((articleId: string) => {
     setWriterArticles(prev => prev.filter(article => article.id !== articleId));
-  };
+  }, []);
+
+  // Nilai konteks yang di-memoized untuk mencegah re-render yang tidak perlu
+  const contextValue = React.useMemo(() => ({
+    isLoggedIn,
+    isWriter,
+    isAdmin, 
+    userProfile,
+    followedAuthors,
+    readingHistory,
+    savedArticles,
+    writerArticles,
+    loading,
+    login,
+    register,
+    loginWithToken,
+    logout,
+    updateProfile,
+    forgotPassword,
+    followAuthor,
+    unfollowAuthor,
+    isFollowing,
+    addToReadingHistory,
+    saveArticle,
+    unsaveArticle,
+    isArticleSaved,
+    addWriterArticle,
+    updateWriterArticle,
+    deleteWriterArticle
+  }), [
+    isLoggedIn, 
+    isWriter, 
+    isAdmin, 
+    userProfile, 
+    followedAuthors, 
+    readingHistory, 
+    savedArticles, 
+    writerArticles, 
+    loading, 
+    login, 
+    register, 
+    loginWithToken, 
+    logout, 
+    updateProfile, 
+    forgotPassword, 
+    followAuthor, 
+    unfollowAuthor, 
+    isFollowing, 
+    addToReadingHistory, 
+    saveArticle, 
+    unsaveArticle, 
+    isArticleSaved, 
+    addWriterArticle, 
+    updateWriterArticle, 
+    deleteWriterArticle
+  ]);
 
   return (
-    <AuthContext.Provider value={{
-      isLoggedIn,
-      isWriter,
-      userProfile,
-      followedAuthors,
-      readingHistory,
-      savedArticles,
-      writerArticles,
-      loading,
-      login,
-      register,
-      loginWithToken,
-      logout,
-      updateProfile,
-      forgotPassword,
-      followAuthor,
-      unfollowAuthor,
-      isFollowing,
-      addToReadingHistory,
-      saveArticle,
-      unsaveArticle,
-      isArticleSaved,
-      addWriterArticle,
-      updateWriterArticle,
-      deleteWriterArticle
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

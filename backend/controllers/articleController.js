@@ -9,6 +9,7 @@ const getAllArticles = async (req, res) => {
     const category = req.query.category;
     const status = req.query.status || 'published';
     const search = req.query.search;
+    const tag = req.query.tag; 
     const sortBy = req.query.sortBy || 'publishedAt';
     const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
 
@@ -23,6 +24,18 @@ const getAllArticles = async (req, res) => {
       query.category = category;
     }
     
+    if (tag) {
+        // Menggunakan operator $in (jika ingin mencari artikel yang memiliki salah satu dari banyak tags)
+        // Jika tag dikirim sebagai string tunggal (misal 'akademik'), kita buat array.
+        // Jika tag dikirim sebagai string yang dipisahkan koma (misal 'tag1,tag2'), kita split.
+        const tagsArray = Array.isArray(tag) ? tag : String(tag).split(',');
+        
+        // Memastikan tags yang dicari sudah di lowercase (sesuai skema model)
+        const lowerCaseTags = tagsArray.map(t => t.trim().toLowerCase());
+
+        // Mencari artikel yang memiliki setidaknya satu tag dari daftar yang diminta
+        query.tags = { $in: lowerCaseTags }; 
+    }
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
