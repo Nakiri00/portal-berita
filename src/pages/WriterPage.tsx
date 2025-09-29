@@ -1,0 +1,211 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { 
+  createArticle, 
+  getWriterArticles, 
+  Article,
+  CreateArticleData 
+} from '../services/articleService';
+import { toast } from 'sonner';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { Badge } from '../components/ui/badge';
+import { Plus, Save } from 'lucide-react';
+
+export function WriterPage() {
+  const { userProfile, isWriter } = useAuth();
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState<CreateArticleData>({
+    title: '',
+    content: '',
+    category: 'berita',
+    tags: [],
+    status: 'draft'
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isWriter) {
+      loadArticles();
+    }
+  }, [isWriter]);
+
+  const loadArticles = async () => {
+    try {
+      setLoading(true);
+      const response = await getWriterArticles();
+      setArticles(response.data.articles);
+    } catch (error) {
+      console.error('Error loading articles:', error);
+      toast.error('Gagal memuat artikel');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.title.trim() || !formData.content.trim()) {
+      toast.error('Judul dan konten harus diisi');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await createArticle(formData);
+      toast.success('Artikel berhasil dibuat');
+      
+      setFormData({
+        title: '',
+        content: '',
+        category: 'berita',
+        tags: [],
+        status: 'draft'
+      });
+      
+      await loadArticles();
+    } catch (error: any) {
+      console.error('Error saving article:', error);
+      toast.error(error.message || 'Gagal menyimpan artikel');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!isWriter) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            Akses Ditolak
+          </h1>
+          <p className="text-gray-600">
+            Anda tidak memiliki akses sebagai penulis.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Dashboard Penulis
+        </h1>
+        <p className="text-gray-600">
+          Selamat datang, {userProfile?.name}. Kelola artikel Anda di sini.
+        </p>
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-2">
+        {/* Tulis Artikel */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Plus className="w-5 h-5 mr-2" />
+              Tulis Artikel Baru
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Judul Artikel *
+                </label>
+                <Input
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  placeholder="Masukkan judul artikel"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Konten *
+                </label>
+                <Textarea
+                  value={formData.content}
+                  onChange={(e) => setFormData({...formData, content: e.target.value})}
+                  placeholder="Tulis konten artikel Anda..."
+                  rows={8}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({...formData, status: e.target.value as any})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                </select>
+              </div>
+
+              <Button type="submit" disabled={submitting} className="w-full">
+                {submitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Menyimpan...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Simpan Artikel
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Daftar Artikel */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Artikel Saya</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-gray-600">Memuat artikel...</p>
+              </div>
+            ) : articles.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600">Belum ada artikel.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {articles.map((article) => (
+                  <div key={article._id} className="border rounded-lg p-4">
+                    <h3 className="font-semibold text-lg mb-2">{article.title}</h3>
+                    <div className="flex items-center space-x-4 text-sm text-gray-500 mb-2">
+                      <span>Status: </span>
+                      <Badge className={article.status === 'published' ? 'bg-green-500' : 'bg-gray-500'}>
+                        {article.status}
+                      </Badge>
+                      <span>Views: {article.views}</span>
+                    </div>
+                    <p className="text-gray-600 text-sm line-clamp-2">
+                      {article.excerpt}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
