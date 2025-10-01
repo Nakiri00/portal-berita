@@ -6,6 +6,8 @@ import { CommentSection } from './CommentSection';
 import { toast } from 'sonner';
 import { useArticles } from '../contexts/ArticleContext';
 import { getWriterProfile } from '../services/userService'; // Import service untuk ambil Bio
+import { getArticleById, likeArticle, Article as ApiArticleType } from '../services/articleService'; // Import service
+
 
 // Definisikan tipe untuk data penulis yang diperlukan
 interface ArticleAuthor {
@@ -38,21 +40,18 @@ export function ArticlePage({
   onLogout 
 }: ArticlePageProps) {
     
-    // --- HOOKS: HARUS DI ATAS DAN UNCONDITIONAL ---
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(42);
-    // State untuk menyimpan bio penulis
+    const [isLiked, setIsLiked] = useState(false);
+    const [likeCount, setLikeCount] = useState(0);
     const [authorBioData, setAuthorBioData] = useState<ArticleAuthor | null>(null);
 
     // Context Hook
-  const { publishedArticles, incrementReadCount } = useArticles();
+    const { publishedArticles, incrementReadCount } = useArticles();
 
     // Cari artikel dari published articles
   let article = publishedArticles.find(a => a.id === articleId);
 
-    // --- EFFECT UNTUK AMBIL BIO PENULIS (HOOKS TETAP DI ATAS) ---
     useEffect(() => {
-        // HANYA JALANKAN JIKA ARTIKEL SUDAH DITEMUKAN
+
         if (!article || !article.authorId) return; 
 
         const fetchAuthorBio = async () => {

@@ -62,15 +62,33 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // API Base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const HISTORY_KEY = 'portal_reading_history';
+const SAVED_KEY = 'portal_saved_articles';
+
+const loadInitialState = () => {
+    try {
+        const savedHistory = localStorage.getItem(HISTORY_KEY);
+        const savedSaved = localStorage.getItem(SAVED_KEY);
+        
+        return {
+            history: savedHistory ? JSON.parse(savedHistory) : [],
+            saved: savedSaved ? JSON.parse(savedSaved) : []
+        };
+    } catch (e) {
+        console.error("Gagal memuat state dari localStorage:", e);
+        return { history: [], saved: [] };
+    }
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const initialState = loadInitialState();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isWriter, setIsWriter] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [followedAuthors, setFollowedAuthors] = useState<string[]>([]);
-  const [readingHistory, setReadingHistory] = useState<ReadHistory[]>([]);
-  const [savedArticles, setSavedArticles] = useState<SavedArticle[]>([]);
+  const [readingHistory, setReadingHistory] = useState<ReadHistory[]>(initialState.history); 
+  const [savedArticles, setSavedArticles] = useState<SavedArticle[]>(initialState.saved);  
   const [writerArticles, setWriterArticles] = useState<any[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
@@ -267,8 +285,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAdmin(false);
     setUserProfile(null);
     setFollowedAuthors([]);
-    setReadingHistory([]);
-    setSavedArticles([]);
     setWriterArticles([]);
     
     // PENGALIHAN KE HALAMAN UTAMA (/)
@@ -341,6 +357,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Effect untuk menyimpan Histori Bacaan
+  useEffect(() => {
+      try {
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(readingHistory));
+      } catch (e) {
+          console.error("Gagal menyimpan histori ke localStorage:", e);
+      }
+  }, [readingHistory]); // Dijalankan setiap kali readingHistory berubah
+  
+  // Effect untuk menyimpan Artikel Tersimpan
+  useEffect(() => {
+      try {
+          localStorage.setItem(SAVED_KEY, JSON.stringify(savedArticles));
+      } catch (e) {
+          console.error("Gagal menyimpan artikel tersimpan ke localStorage:", e);
+      }
+  }, [savedArticles]); // Dijalankan setiap kali savedArticles berubah
+
   // Perbaikan: Pastikan fungsi-fungsi ini di-wrap dengan useCallback
   const followAuthor = React.useCallback((authorId: string) => {
     setFollowedAuthors(prev => [...prev, authorId]);
@@ -359,24 +393,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const existingIndex = prev.findIndex(item => item.articleId === articleId);
       const now = new Date().toLocaleDateString('id-ID');
       
+      let updatedHistory: ReadHistory[];
+      
       if (existingIndex >= 0) {
-        // Update existing entry
-        const updated = [...prev];
-        updated[existingIndex] = {
-          ...updated[existingIndex],
+        // Jika sudah ada, update count dan tanggal, lalu pindahkan ke urutan teratas
+        const existingItem = prev[existingIndex];
+        const updatedItem = {
+          ...existingItem,
           readDate: now,
-          readCount: updated[existingIndex].readCount + 1
+          readCount: existingItem.readCount + 1
         };
-        return updated;
+        // Hapus item lama, tambahkan item baru di depan
+        updatedHistory = [updatedItem, ...prev.filter((_, index) => index !== existingIndex)];
       } else {
-        // Add new entry
-        return [{
+        // Tambahkan entri baru di depan
+        updatedHistory = [{
           articleId,
           title,
           readDate: now,
           readCount: 1
-        }, ...prev.slice(0, 49)]; // Keep only latest 50 items
+        }, ...prev];
       }
+      
+      return updatedHistory.slice(0, 50); // Batasi hingga 50 item terbaru
     });
   }, []);
 

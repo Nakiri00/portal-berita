@@ -18,7 +18,7 @@ import { Plus, Save, Image as ImageIcon, Upload, Trash2, FileText } from 'lucide
 // Definisikan tipe untuk data form lokal
 interface ArticleForm extends CreateArticleData {
     imageFile: File | null;
-    imagePreview: string; // Digunakan untuk menyimpan nama file
+    imagePreview: string;
     tags: string[]
 }
 
@@ -35,10 +35,9 @@ export function WriterPage() {
     category: 'berita',
     tags: [],
     status: 'draft',
-    // Properti baru untuk gambar:
-    featuredImage: '', // URL gambar yang akan dikirim ke API
+    featuredImage: '', 
     imageFile: null,
-    imagePreview: '' // Menyimpan nama file yang diunggah
+    imagePreview: '' 
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -54,7 +53,6 @@ export function WriterPage() {
   const loadArticles = async () => {
     try {
       setLoading(true);
-      // ASUMSI: getWriterArticles mengambil artikel milik user yang sedang login
       const response = await getWriterArticles(); 
       setArticles(response.data.articles);
     } catch (error) {
@@ -69,24 +67,19 @@ export function WriterPage() {
     const file = e.target.files?.[0];
     if (file) {
       const allowedTypes = ['image/jpeg', 'image/png']; 
-      
-      // VALIDASI FORMAT GAMBAR BARU
+    
       if (!allowedTypes.includes(file.type) && !file.type.includes('jpg')) { 
         toast.error("Format file harus JPG, JPEG, atau PNG.");
-        // RESET INPUT FISIK SAAT GAGAL
         e.target.value = '';
         return;
       }
-      
-      // VALIDASI UKURAN FILE (2MB)
+    
       if (file.size > 10 * 1024 * 1024) { 
         toast.error("Ukuran gambar maksimal 10MB.");
-        // RESET INPUT FISIK SAAT GAGAL
         e.target.value = '';
         return;
       }
 
-      // Jika berhasil lolos validasi:
       setFormData(prev => ({ 
         ...prev, 
         imageFile: file,

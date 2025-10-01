@@ -61,7 +61,22 @@ const userSchema = new mongoose.Schema({
     instagram: { type: String, default: '' },
     facebook: { type: String, default: '' },
     threads: { type: String, default: '' }
-  }
+  },
+    readingHistory: [{
+      articleId: String,
+      title: String,
+      readDate: Date, 
+      readCount: Number
+  }],
+  savedArticles: [{
+      articleId: String,
+      title: String,
+      excerpt: String,
+      author: String,
+      savedDate: Date, 
+      imageUrl: String,
+      tag: String
+  }],
 }, {
   timestamps: true // createdAt dan updatedAt otomatis
 });
