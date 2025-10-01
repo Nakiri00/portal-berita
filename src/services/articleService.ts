@@ -9,6 +9,7 @@ const getAuthHeaders = () => {
   };
 };
 
+
 export interface Article {
   _id: string;
   title: string;
@@ -175,18 +176,19 @@ export const getWriterArticles = async (params?: {
 };
 
 // Create new article
-export const createArticle = async (articleData: CreateArticleData): Promise<ArticleResponse> => {
+export const createArticle = async (articleData: FormData) => {
+  const token = localStorage.getItem('portal_token');
   const response = await fetch(`${API_BASE_URL}/articles/writer/create`, {
     method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(articleData)
+    headers: { Authorization: token ? `Bearer ${token}` : '' },
+    body: articleData
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.message || 'Failed to create article');
+    throw new Error(errorData.message || 'Gagal membuat artikel');
   }
-  
+
   return response.json();
 };
 

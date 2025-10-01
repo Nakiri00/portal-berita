@@ -408,14 +408,14 @@ export function WriterPage({ onBackClick, onPublish }: WriterPageProps) {
                   id="content"
                   placeholder="Mulai menulis artikel Anda di sini...
 
-Anda dapat menulis paragraf, membuat daftar, dan menambahkan heading dengan format sederhana.
+                  Anda dapat menulis paragraf, membuat daftar, dan menambahkan heading dengan format sederhana.
 
-Tips menulis artikel yang baik:
-- Gunakan judul yang menarik
-- Buat paragraf pembuka yang engaging
-- Gunakan subjudul untuk memudahkan pembacaan
-- Berikan contoh atau analogi yang relatable
-- Tutup dengan kesimpulan yang actionable"
+                  Tips menulis artikel yang baik:
+                  - Gunakan judul yang menarik
+                  - Buat paragraf pembuka yang engaging
+                  - Gunakan subjudul untuk memudahkan pembacaan
+                  - Berikan contoh atau analogi yang relatable
+                  - Tutup dengan kesimpulan yang actionable"
                   rows={15}
                   value={article.content}
                   onChange={(e) => setArticle(prev => ({ ...prev, content: e.target.value }))}

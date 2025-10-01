@@ -18,6 +18,7 @@ import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext'; 
+import dayjs from 'dayjs';
 
 import { 
   User, 
@@ -344,7 +345,7 @@ export function UserProfileDropdown({
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-sm truncate">{item.title}</h4>
                       <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
-                        <span>Dibaca {item.readDate}</span>
+                        <span>Terakhir dibaca: {dayjs(item.lastReadAt).format('DD MMMM YYYY, HH:mm')} WIB </span>
                         <div className="flex items-center">
                           <Eye className="h-3 w-3 mr-1" />
                           <span>{item.readCount}x</span>

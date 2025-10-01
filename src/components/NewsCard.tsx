@@ -1,5 +1,6 @@
 import { Badge } from './ui/badge';
 import { Calendar, User, Eye } from 'lucide-react';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 interface NewsCardProps {
   id: string;
@@ -37,7 +38,7 @@ export function NewsCard({
       <div className={`${isHeadline ? 'lg:flex lg:h-80' : ''}`}>
         <div className={`${isHeadline ? 'lg:w-1/2' : ''}`}>
           <img 
-            src={imageUrl} 
+            src={`${API_BASE_URL}${imageUrl}`} 
             alt={title}
             className={`w-full object-cover ${
               isHeadline ? 'h-48 sm:h-56 lg:h-full' : 'h-36 sm:h-48'

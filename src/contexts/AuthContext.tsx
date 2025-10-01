@@ -502,7 +502,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteWriterArticle = React.useCallback((articleId: string) => {
+    // Hapus dari writerArticles
     setWriterArticles(prev => prev.filter(article => article.id !== articleId));
+    // Hapus dari savedArticles
+    setSavedArticles(prev => prev.filter(article => article.articleId !== articleId));
+    // Hapus dari readingHistory
+    setReadingHistory(prev => prev.filter(history => history.articleId !== articleId));
+
+    setSavedArticles(prev => {
+      const updated = prev.filter(article => article.articleId !== articleId);
+      localStorage.setItem(SAVED_KEY(userProfile?._id), JSON.stringify(updated));
+      return updated;
+    });
+
+    setReadingHistory(prev => {
+      const updated = prev.filter(history => history.articleId !== articleId);
+      localStorage.setItem(HISTORY_KEY(userProfile?._id), JSON.stringify(updated));
+      return updated;
+    });
   }, []);
 
   // Nilai konteks yang di-memoized untuk mencegah re-render yang tidak perlu

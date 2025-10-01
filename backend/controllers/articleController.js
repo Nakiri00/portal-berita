@@ -196,34 +196,17 @@ const getWriterArticles = async (req, res) => {
 // Create new article
 const createArticle = async (req, res) => {
   try {
-    const {
-      title,
-      content,
-      excerpt,
-      category,
-      tags,
-      featuredImage,
-      status = 'draft',
-      seoTitle,
-      seoDescription
-    } = req.body;
+    // Data datang dari body (JSON), termasuk Base64 di featuredImage
+    const { title, content, excerpt, category, tags, status = 'draft', seoTitle, seoDescription } = req.body;
+    const imageFile = req.file; // <-- file fisik di server
 
-    // Validation
     if (!title || !content) {
-      return res.status(400).json({
-        success: false,
-        message: 'Judul dan konten harus diisi'
-      });
+      return res.status(400).json({ success: false, message: 'Judul dan konten harus diisi' });
     }
 
-    // Get author info
     const author = await User.findById(req.user.id);
-    if (!author) {
-      return res.status(404).json({
-        success: false,
-        message: 'Author tidak ditemukan'
-      });
-    }
+    if (!author) return res.status(404).json({ success: false, message: 'Author tidak ditemukan' });
+
 
     // Create article
     const article = new Article({
@@ -231,8 +214,8 @@ const createArticle = async (req, res) => {
       content,
       excerpt,
       category: category || 'berita',
-      tags: tags || [],
-      featuredImage,
+      tags: tags ? JSON.parse(tags) : [],
+      featuredImage: imageFile ? `/uploads/${imageFile.filename}` : null,
       status,
       author: req.user.id,
       authorName: author.name,
