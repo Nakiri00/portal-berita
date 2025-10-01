@@ -62,20 +62,20 @@ const userSchema = new mongoose.Schema({
     facebook: { type: String, default: '' },
     threads: { type: String, default: '' }
   },
-    readingHistory: [{
-      articleId: String,
-      title: String,
-      readDate: Date, 
-      readCount: Number
+  readingHistory: [{
+    articleId: String,
+    title: String,
+    readDate: Date,
+    lastReadAt: Date,
+    readCount: Number,
   }],
   savedArticles: [{
-      articleId: String,
-      title: String,
-      excerpt: String,
-      author: String,
-      savedDate: Date, 
-      imageUrl: String,
-      tag: String
+    articleId: String,
+    title: String,
+    excerpt: String,
+    imageUrl: String,
+    tag: String,
+    savedAt: Date,
   }],
 }, {
   timestamps: true // createdAt dan updatedAt otomatis

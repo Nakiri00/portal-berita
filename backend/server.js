@@ -14,7 +14,8 @@ const passwordRoutes = require('./routes/password');
 const oauthRoutes = require('./routes/oauth');
 const articleRoutes = require('./routes/articles');
 const userRoutes = require('./routes/users');
-
+const readingHistoryRoutes = require("./routes/readingHistory");
+const savedArticlesRoutes = require("./routes/savedArticles");
 // Connect to MongoDB
 connectDB();
 
@@ -88,6 +89,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/password', passwordRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/user', userRoutes);
+app.use("/api/reading-history", readingHistoryRoutes);
+app.use("/api/saved-articles", savedArticlesRoutes);
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({

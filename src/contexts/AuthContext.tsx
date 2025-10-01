@@ -17,6 +17,7 @@ interface ReadHistory {
   articleId: string;
   title: string;
   readDate: string;
+  lastReadAt: string;
   readCount: number;
 }
 
@@ -62,33 +63,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // API Base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-const HISTORY_KEY = 'portal_reading_history';
-const SAVED_KEY = 'portal_saved_articles';
+const HISTORY_KEY = (userId?: string) => `portal_reading_history_${userId || 'guest'}`;
+const SAVED_KEY = (userId?: string) => `portal_saved_articles_${userId || 'guest'}`;
 
-const loadInitialState = () => {
-    try {
-        const savedHistory = localStorage.getItem(HISTORY_KEY);
-        const savedSaved = localStorage.getItem(SAVED_KEY);
-        
-        return {
-            history: savedHistory ? JSON.parse(savedHistory) : [],
-            saved: savedSaved ? JSON.parse(savedSaved) : []
-        };
-    } catch (e) {
-        console.error("Gagal memuat state dari localStorage:", e);
-        return { history: [], saved: [] };
-    }
-};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const initialState = loadInitialState();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isWriter, setIsWriter] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [followedAuthors, setFollowedAuthors] = useState<string[]>([]);
-  const [readingHistory, setReadingHistory] = useState<ReadHistory[]>(initialState.history); 
-  const [savedArticles, setSavedArticles] = useState<SavedArticle[]>(initialState.saved);  
+  const [readingHistory, setReadingHistory] = useState<ReadHistory[]>([]); 
+  const [savedArticles, setSavedArticles] = useState<SavedArticle[]>([]);  
   const [writerArticles, setWriterArticles] = useState<any[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
@@ -357,23 +343,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Effect untuk menyimpan Histori Bacaan
   useEffect(() => {
-      try {
-          localStorage.setItem(HISTORY_KEY, JSON.stringify(readingHistory));
-      } catch (e) {
-          console.error("Gagal menyimpan histori ke localStorage:", e);
-      }
-  }, [readingHistory]); // Dijalankan setiap kali readingHistory berubah
+    const userId = userProfile?._id;
+    try {
+      const savedHistory = localStorage.getItem(HISTORY_KEY(userId));
+      const savedSaved = localStorage.getItem(SAVED_KEY(userId));
+      setReadingHistory(savedHistory ? JSON.parse(savedHistory) : []);
+      setSavedArticles(savedSaved ? JSON.parse(savedSaved) : []);
+    } catch (e) {
+      console.error("Gagal memuat state dari localStorage:", e);
+    }
+  }, [userProfile]);
   
-  // Effect untuk menyimpan Artikel Tersimpan
   useEffect(() => {
+    const userId = userProfile?._id;
+    try {
+      localStorage.setItem(HISTORY_KEY(userId), JSON.stringify(readingHistory));
+    } catch (e) {
+      console.error("Gagal menyimpan histori ke localStorage:", e);
+    }
+  }, [readingHistory, userProfile]);
+
+  useEffect(() => {
+    const userId = userProfile?._id;
+    try {
+      localStorage.setItem(SAVED_KEY(userId), JSON.stringify(savedArticles));
+    } catch (e) {
+      console.error("Gagal menyimpan artikel tersimpan ke localStorage:", e);
+    }
+  }, [savedArticles, userProfile]);
+
+  useEffect(() => {
+  if (isLoggedIn && userProfile?._id) {
+    (async () => {
       try {
-          localStorage.setItem(SAVED_KEY, JSON.stringify(savedArticles));
+        // Fetch saved articles dari DB
+        const resSaved = await fetch(`${API_BASE_URL}/saved-articles`, { headers: getAuthHeaders() });
+        const savedData = await resSaved.json();
+        
+        if (savedData.success) {
+          setSavedArticles(savedData.articles);
+          localStorage.setItem(SAVED_KEY(userProfile._id), JSON.stringify(savedData.articles));
+        }
+
+        // Fetch reading history dari DB
+        const resHistory = await fetch(`${API_BASE_URL}/reading-history`, { headers: getAuthHeaders() });
+        const historyData = await resHistory.json();
+
+        if (historyData.success) {
+          setReadingHistory(historyData.history);
+          localStorage.setItem(HISTORY_KEY(userProfile._id), JSON.stringify(historyData.history));
+        }
       } catch (e) {
-          console.error("Gagal menyimpan artikel tersimpan ke localStorage:", e);
+        console.error("Gagal sync data user:", e);
       }
-  }, [savedArticles]); // Dijalankan setiap kali savedArticles berubah
+    })();
+  }
+}, [isLoggedIn, userProfile, getAuthHeaders]);
 
   // Perbaikan: Pastikan fungsi-fungsi ini di-wrap dengan useCallback
   const followAuthor = React.useCallback((authorId: string) => {
@@ -388,45 +414,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return followedAuthors.includes(authorId);
   }, [followedAuthors]);
 
-  const addToReadingHistory = React.useCallback((articleId: string, title: string) => {
+  const addToReadingHistory = React.useCallback(async (articleId: string, title: string) => {
+    const now = new Date().toISOString();
+    
     setReadingHistory(prev => {
-      const existingIndex = prev.findIndex(item => item.articleId === articleId);
-      const now = new Date().toLocaleDateString('id-ID');
-      
-      let updatedHistory: ReadHistory[];
-      
-      if (existingIndex >= 0) {
-        // Jika sudah ada, update count dan tanggal, lalu pindahkan ke urutan teratas
-        const existingItem = prev[existingIndex];
-        const updatedItem = {
-          ...existingItem,
-          readDate: now,
-          readCount: existingItem.readCount + 1
-        };
-        // Hapus item lama, tambahkan item baru di depan
-        updatedHistory = [updatedItem, ...prev.filter((_, index) => index !== existingIndex)];
+      const existing = prev.find(item => item.articleId === articleId);
+      let updated;
+      if (existing) {
+        updated = prev.map(item => 
+          item.articleId === articleId 
+            ? { ...item, readCount: item.readCount + 1, lastReadAt: now }
+            : item
+        );
       } else {
-        // Tambahkan entri baru di depan
-        updatedHistory = [{
-          articleId,
-          title,
-          readDate: now,
-          readCount: 1
-        }, ...prev];
+        updated = [{ articleId, title, readCount: 1, lastReadAt: now, readDate: now }, ...prev];
       }
-      
-      return updatedHistory.slice(0, 50); // Batasi hingga 50 item terbaru
+      localStorage.setItem(HISTORY_KEY(userProfile?._id), JSON.stringify(updated));
+      return updated;
     });
-  }, []);
 
-  const saveArticle = React.useCallback((article: SavedArticle) => {
-    setSavedArticles(prev => {
-      if (prev.some(saved => saved.articleId === article.articleId)) {
-        return prev; // Already saved
+    if (isLoggedIn) {
+      try {
+        await fetch(`${API_BASE_URL}/reading-history`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ articleId, title }),
+        });
+      } catch (err) {
+        console.error("Gagal simpan history ke server:", err);
       }
-      return [article, ...prev];
-    });
-  }, []);
+    }
+  }, [isLoggedIn, userProfile, getAuthHeaders]);
+
+  const saveArticle = React.useCallback(async (article: SavedArticle) => {
+  // update local state + localStorage dulu
+  setSavedArticles(prev => {
+    if (prev.some(saved => saved.articleId === article.articleId)) return prev;
+    const updated = [article, ...prev];
+    localStorage.setItem(SAVED_KEY(userProfile?._id), JSON.stringify(updated));
+    return updated;
+  });
+
+  // sync ke server
+  if (isLoggedIn) {
+    try {
+      await fetch(`${API_BASE_URL}/saved-articles`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(article),
+      });
+    } catch (err) {
+      console.error("Gagal simpan artikel ke server:", err);
+    }
+  }
+}, [isLoggedIn, userProfile, getAuthHeaders]);
 
   const unsaveArticle = React.useCallback((articleId: string) => {
     setSavedArticles(prev => prev.filter(article => article.articleId !== articleId));
