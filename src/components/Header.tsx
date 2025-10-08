@@ -19,7 +19,6 @@ interface HeaderProps {
     email: string;
     avatar: string;
     bio?: string;
-    joinDate: string;
   };
   readingHistory: any[];
   savedArticles: any[];

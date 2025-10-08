@@ -125,7 +125,6 @@ export function HomePage({
 
   // Group articles by tags for section display
   const getArticlesByTag = (tag: string) => {
-    // KUNCI PERBAIKAN: Gunakan slugified tag di sini juga
     return allArticles
       .filter(article => article.tag === tag.toLowerCase()) 
       .sort((a, b) => {

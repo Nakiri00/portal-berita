@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { useArticles } from '../contexts/ArticleContext';
 import { getWriterProfile } from '../services/userService'; // Import service untuk ambil Bio
 import { getArticleById, likeArticle, Article as ApiArticleType } from '../services/articleService'; // Import service
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 // Definisikan tipe untuk data penulis yang diperlukan
 interface ArticleAuthor {
@@ -48,7 +48,7 @@ export function ArticlePage({
     const { publishedArticles, incrementReadCount } = useArticles();
 
     // Cari artikel dari published articles
-  let article = publishedArticles.find(a => a.id === articleId);
+    let article = publishedArticles.find(a => a.id === articleId);
 
     useEffect(() => {
 
@@ -83,7 +83,6 @@ export function ArticlePage({
   useEffect(() => {
     // HANYA JALANKAN JIKA ARTIKEL SUDAH DITEMUKAN
     if (!article) return;
-
     if (isLoggedIn) {
       onAddToHistory(articleId, article.title);
     }
@@ -96,9 +95,6 @@ export function ArticlePage({
       return () => clearTimeout(timer);
     }
   }, [article, articleId, isLoggedIn, onAddToHistory, publishedArticles, incrementReadCount]);
-
-
-    // --- KONDISI PENGEMBALIAN AWAL (HARUS SETELAH SEMUA HOOKS) ---
   if (!article) {
     return (
         <div className="max-w-4xl mx-auto px-4 py-16 text-center text-gray-500">
@@ -186,11 +182,6 @@ export function ArticlePage({
     window.location.href = '/';
   };
 
-  const handleEmergencyExit = () => {
-    // Emergency exit function that always works
-    window.location.replace('/');
-  };
-
 
   return (
     <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
@@ -205,35 +196,6 @@ export function ArticlePage({
           <span className="hidden sm:inline">Kembali</span>
           <span className="sm:hidden">Kembali</span>
         </Button>
-        <Button 
-          variant="outline" 
-          onClick={handleHomeClick}
-          className="hover:bg-blue-50 hover:border-blue-300"
-        >
-          <span>Beranda</span>
-        </Button>
-        {/* Tombol Logout - Hanya jika user login */}
-        {isLoggedIn && (
-            <Button
-              variant="outline"
-              onClick={handleLogoutClick} // MEMANGGIL HANDLER BARU
-              className="ml-auto bg-red-500 text-white hover:bg-red-600"
-              size="sm"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Keluar
-            </Button>
-        )}
-        {/* Emergency exit button (hidden but functional) */}
-        <Button 
-          variant="ghost" 
-          onClick={handleEmergencyExit}
-          className="opacity-50 hover:opacity-100 text-xs"
-          size="sm"
-          title="Keluar ke beranda (emergency)"
-        >
-          ⌂
-        </Button>
       </div>
 
       {/* Article Header */}
@@ -241,7 +203,7 @@ export function ArticlePage({
         {/* Featured Image */}
         <div className="w-full h-48 sm:h-64 md:h-80 overflow-hidden rounded-t-lg">
           <img 
-            src={currentArticle.imageUrl} 
+            src={API_BASE_URL + currentArticle.imageUrl} 
             alt={currentArticle.title}
             className="w-full h-full object-cover"
           />

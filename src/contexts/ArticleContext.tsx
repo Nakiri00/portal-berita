@@ -40,6 +40,7 @@ const mapApiToLocalArticle = (apiArticle: ApiArticle): Article => {
         id: apiArticle._id, 
         title: apiArticle.title,
         excerpt: apiArticle.excerpt,
+        content: apiArticle.content,
         imageUrl: apiArticle.featuredImage || '',
         author: apiArticle.authorName,
         authorId: apiArticle.author?._id || '',

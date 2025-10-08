@@ -75,6 +75,7 @@ const userSchema = new mongoose.Schema({
     excerpt: String,
     imageUrl: String,
     tag: String,
+    author: String,
     savedAt: Date,
   }],
 }, {

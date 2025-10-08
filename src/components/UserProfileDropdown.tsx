@@ -1,3 +1,4 @@
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -35,13 +36,20 @@ import {
   MessageCircle
 } from 'lucide-react';
 
-// Hapus interface UserProfile, ReadHistory, SavedArticle karena sudah di AuthContext
 
 interface UserProfileDropdownProps {
-  // HANYA pertahankan props yang benar-benar perlu diwariskan dari parent
-  onUpdateProfile: (profile: any) => void; 
-  onLogout: () => void;
-  onArticleClick: (articleId: string) => void;
+  userProfile: {
+    name: string;
+    email: string;
+    avatar: string;
+    bio?: string | undefined;
+  };
+  readingHistory: any[];
+  savedArticles: any[];
+  onUpdateProfile: (profile: any) => void;
+  onLogout: () => void;
+  onArticleClick: (articleId: string) => void;
+  isWriter: boolean;
 }
 
 export function UserProfileDropdown({
@@ -387,7 +395,7 @@ export function UserProfileDropdown({
                 {savedArticles.map((article) => (
                   <div key={article.articleId} className="flex space-x-3 p-3 bg-gray-50 rounded-lg">
                     <img 
-                      src={article.imageUrl} 
+                      src={API_BASE_URL + article.imageUrl} 
                       alt={article.title}
                       className="w-20 h-16 object-cover rounded"
                     />
