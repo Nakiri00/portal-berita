@@ -1,5 +1,5 @@
 const express = require('express');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, optionalAuth } = require('../middleware/auth');
 const {
   getAllArticles,
   getArticleById,
@@ -8,8 +8,9 @@ const {
   createArticle,
   updateArticle,
   deleteArticle,
-  likeArticle,
-  getFeaturedArticles
+  toggleArticleLike,
+  getFeaturedArticles,
+  logArticleViewAndIncrement
 } = require('../controllers/articleController');
 const multer = require('multer');
 const path = require('path');
@@ -28,13 +29,14 @@ const router = express.Router();
 router.get('/', getAllArticles); // GET /api/articles
 router.get('/featured', getFeaturedArticles); // GET /api/articles/featured
 router.get('/author/:authorId', getArticlesByAuthor); // GET /api/articles/author/:authorId
-router.get('/:id', getArticleById); // GET /api/articles/:id
-router.post('/:id/like', likeArticle); // POST /api/articles/:id/like
+router.get('/:id', optionalAuth, getArticleById); // GET /api/articles/:id
 
 // Protected routes (requires authentication)
 router.use(authenticate);
 
 // Writer routes
+router.post('/:id/like', toggleArticleLike); // POST /api/articles/:id/like
+router.post('/:id/view', logArticleViewAndIncrement); // POST /api/articles/:id/view 
 router.get('/writer/my-articles', getWriterArticles); // GET /api/articles/writer/my-articles
 router.post('/writer/create', authenticate, upload.single('imageFile'), createArticle); // POST /api/articles/writer/create
 router.put('/writer/:id', updateArticle); // PUT /api/articles/writer/:id

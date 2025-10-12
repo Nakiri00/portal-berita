@@ -6,7 +6,7 @@ interface FilterParams {
   search?: string;
 }
 
-interface Article {
+export interface Article {
   id: string;
   title: string;
   content: string;
@@ -18,6 +18,8 @@ interface Article {
   readCount: number;
   isHeadline: boolean;
   tag: string;
+  likes: number;
+  isLikedByMe?: boolean;
   readTime?: string;
   createdAt?: number; // Add timestamp to prevent duplicates
 }
@@ -25,13 +27,13 @@ interface Article {
 interface ArticleContextType {
   publishedArticles: Article[];
   publishArticle: (article: Omit<Article, 'id' | 'author' | 'authorId' | 'publishDate' | 'readCount' | 'isHeadline' | 'createdAt'>, authorName?: string, authorId?: string) => Article;
-  incrementReadCount: (articleId: string) => void;
+//   incrementReadCount: (articleId: string) => void;
   fetchArticles: (params?: FilterParams) => Promise<void>; 
 }
 
 const ArticleContext = createContext<ArticleContextType | undefined>(undefined);
 
-const mapApiToLocalArticle = (apiArticle: ApiArticle): Article => {
+export const mapApiToLocalArticle = (apiArticle: ApiArticle): Article => {
     const publishDateString = apiArticle.publishedAt
         ? new Date(apiArticle.publishedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
         : 'N/A';
@@ -46,6 +48,8 @@ const mapApiToLocalArticle = (apiArticle: ApiArticle): Article => {
         authorId: apiArticle.author?._id || '',
         publishDate: publishDateString,
         readCount: apiArticle.views, 
+        likes: apiArticle.likes,
+        isLikedByMe: apiArticle.isLikedByMe || false,
         isHeadline: apiArticle.isFeatured, 
         tag: apiArticle.category,
         readTime: `${apiArticle.readingTime} menit baca`,
@@ -76,24 +80,24 @@ export function ArticleProvider({ children }: { children: ReactNode }) {
       fetchArticles();
   }, [fetchArticles]); 
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPublishedArticles(prev => prev.map(article => {
-        const isRecent = article.createdAt && (Date.now() - article.createdAt) < 24 * 60 * 60 * 1000;
-        if (isRecent && Math.random() < 0.3) { // 30% chance to gain a reader
-          const newReadCount = article.readCount + Math.floor(Math.random() * 3) + 1;
-          return {
-            ...article,
-            readCount: newReadCount,
-            isHeadline: newReadCount >= 50 || article.isHeadline
-          };
-        }
-        return article;
-      }));
-    }, 10000); 
+//   useEffect(() => {
+//     const interval = setInterval(() => {
+//       setPublishedArticles(prev => prev.map(article => {
+//         const isRecent = article.createdAt && (Date.now() - article.createdAt) < 24 * 60 * 60 * 1000;
+//         if (isRecent && Math.random() < 0.3) { // 30% chance to gain a reader
+//           const newReadCount = article.readCount + Math.floor(Math.random() * 3) + 1;
+//           return {
+//             ...article,
+//             readCount: newReadCount,
+//             isHeadline: newReadCount >= 50 || article.isHeadline
+//           };
+//         }
+//         return article;
+//       }));
+//     }, 10000); 
 
-    return () => clearInterval(interval);
-  }, []);
+//     return () => clearInterval(interval);
+//   }, []);
 
   const publishArticle = useCallback((article: Omit<Article, 'id' | 'author' | 'authorId' | 'publishDate' | 'readCount' | 'isHeadline' | 'createdAt'>, authorName?: string, authorId?: string) => {
     const wordCount = article.content.replace(/<[^>]*>/g, '').split(/\s+/).length;
@@ -140,38 +144,38 @@ export function ArticleProvider({ children }: { children: ReactNode }) {
     return addedArticle || newArticle;
   }, []);
 
-  const incrementReadCount = useCallback((articleId: string) => {
-    setPublishedArticles(prev => prev.map(article => {
-      if (article.id === articleId) {
-        const newReadCount = article.readCount + 1;
-        const wasHeadline = article.isHeadline;
-        const becomeHeadline = newReadCount >= 50 && !wasHeadline;
-        
-        // Show notification when article becomes headline
-        if (becomeHeadline) {
-          console.log(`🎉 Artikel "${article.title}" telah menjadi HEADLINE dengan ${newReadCount} pembaca!`);
-        }
-        
-        return {
-          ...article,
-          readCount: newReadCount,
-          // Auto-promote to headline if readCount reaches 50
-          isHeadline: newReadCount >= 50 || article.isHeadline
-        };
-      }
-      return article;
-    }));
-  }, []);
+//   const incrementReadCount = useCallback((articleId: string) => {
+//     setPublishedArticles(prev => prev.map(article => {
+//       if (article.id === articleId) {
+//         const newReadCount = article.readCount + 1;
+//         const wasHeadline = article.isHeadline;
+//         const becomeHeadline = newReadCount >= 50 && !wasHeadline;
+//         
+//         // Show notification when article becomes headline
+//         if (becomeHeadline) {
+//           console.log(`🎉 Artikel "${article.title}" telah menjadi HEADLINE dengan ${newReadCount} pembaca!`);
+//         }
+//         
+//         return {
+//           ...article,
+//           readCount: newReadCount,
+//           // Auto-promote to headline if readCount reaches 50
+//           isHeadline: newReadCount >= 50 || article.isHeadline
+//         };
+//       }
+//       return article;
+//     }));
+//   }, []);
 
   const contextValue = useMemo(() => ({
     publishedArticles,
     publishArticle,
-    incrementReadCount,
+    // incrementReadCount,
     fetchArticles, 
   }), [
     publishedArticles,
     publishArticle,
-    incrementReadCount,
+    // incrementReadCount,
     fetchArticles,
   ]);
 

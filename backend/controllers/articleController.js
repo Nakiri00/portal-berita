@@ -90,13 +90,18 @@ const getArticleById = async (req, res) => {
         message: 'Artikel tidak ditemukan'
       });
     }
-
+    let isLikedByMe = false;
+    if (req.user && req.user.likedArticles) { 
+        isLikedByMe = req.user.likedArticles.some(
+            likedId => likedId.toString() === id
+        );
+    }
     // Increment views
-    await Article.findByIdAndUpdate(id, { $inc: { views: 1 } });
+    // await Article.findByIdAndUpdate(id, { $inc: { views: 1 } });
 
     res.json({
       success: true,
-      data: { article: { ...article, views: article.views + 1 } }
+      data: { article : { ...article, isLikedByMe } }
     });
   } catch (error) {
     console.error('Get article error:', error);
@@ -106,6 +111,65 @@ const getArticleById = async (req, res) => {
     });
   }
 };
+
+const logArticleViewAndIncrement = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const today = new Date();
+    const user = await User.findById(userId);
+    const article = await Article.findById(id); 
+
+    if (!user || !article) {
+      return res.status(404).json({ success: false, message: 'User atau Artikel tidak ditemukan' });
+    }
+
+    const historyIndex = user.readingHistory.findIndex(h => h.articleId.toString() === id);
+    let viewsIncremented = false;
+    let becameFeatured = false; 
+
+    if (historyIndex === -1) {
+      // 1. Belum pernah baca -> Increment view
+      article.views += 1;
+      viewsIncremented = true;
+      if (article.views >= 50 && !article.isFeatured) {
+        article.isFeatured = true;
+        becameFeatured = true;
+      }
+      // Simpan Article
+      await article.save({ validateBeforeSave: false });
+      user.readingHistory.push({
+        articleId: id,
+        title: article.title,
+        readDate: today,
+        lastReadAt: today,
+        readCount: 1,
+      });
+    } else {
+      const historyEntry = user.readingHistory[historyIndex];
+      historyEntry.lastReadAt = today;
+      historyEntry.readCount += 1;
+    }
+
+    await user.save({ validateBeforeSave: false });
+
+    res.json({
+      success: true,
+      message: viewsIncremented 
+        ? (becameFeatured ? 'Artikel menjadi HEADLINE! ' : '') + 'View artikel dihitung dan histori diperbarui' 
+        : 'Histori bacaan diperbarui',
+      data: { 
+        viewsIncremented,
+        becameFeatured 
+      }
+    });
+
+  } catch (error) {
+    console.error('Log article view error:', error);
+    res.status(500).json({ success: false, message: 'Gagal mencatat riwayat bacaan' });
+  }
+};
+
 
 // Get articles by author
 const getArticlesByAuthor = async (req, res) => {
@@ -345,34 +409,61 @@ const deleteArticle = async (req, res) => {
 };
 
 // Like article
-const likeArticle = async (req, res) => {
+const toggleArticleLike = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id; // Diambil dari middleware authenticate
 
+    // Ambil User dan Article (tanpa .lean() agar bisa di-save)
+    const user = await User.findById(userId);
     const article = await Article.findById(id);
-    if (!article) {
-      return res.status(404).json({
-        success: false,
-        message: 'Artikel tidak ditemukan'
-      });
+
+    if (!user || !article) {
+      return res.status(404).json({ success: false, message: 'User atau Artikel tidak ditemukan' });
     }
 
-    await article.incrementLikes();
+    const articleIdString = id.toString();
+    
+    // Cek apakah user sudah menyukai artikel
+    const likedIndex = user.likedArticles.findIndex(
+        likedId => likedId.toString() === articleIdString
+    );
+    const isCurrentlyLiked = likedIndex !== -1;
+    let newLikeStatus;
+
+    if (isCurrentlyLiked) {
+      // Logic UNLIKE
+      user.likedArticles.splice(likedIndex, 1); // Hapus dari array user
+      article.likes = Math.max(0, article.likes - 1); // Kurangi jumlah total likes di Article
+      newLikeStatus = false;
+    } else {
+      // Logic LIKE
+      user.likedArticles.push(articleIdString); // Tambah ke array user
+      article.likes += 1; // Tambah jumlah total likes di Article
+      newLikeStatus = true;
+    }
+
+    // Simpan perubahan
+    await user.save({ validateBeforeSave: false });
+    await article.save({ validateBeforeSave: false });
 
     res.json({
       success: true,
-      message: 'Artikel berhasil di-like',
-      data: { likes: article.likes + 1 }
+      message: newLikeStatus ? 'Artikel berhasil disukai' : 'Suka artikel dibatalkan',
+      data: {
+        isLiked: newLikeStatus,
+        totalLikes: article.likes,
+      },
     });
+
   } catch (error) {
-    console.error('Like article error:', error);
+    console.error('Toggle article like error:', error);
     res.status(500).json({
       success: false,
-      message: 'Gagal memberikan like'
+      message: 'Gagal memproses like artikel'
     });
   }
 };
-
 // Get featured articles
 const getFeaturedArticles = async (req, res) => {
   try {
@@ -408,6 +499,7 @@ module.exports = {
   createArticle,
   updateArticle,
   deleteArticle,
-  likeArticle,
-  getFeaturedArticles
+  toggleArticleLike,
+  getFeaturedArticles,
+  logArticleViewAndIncrement
 };

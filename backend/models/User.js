@@ -78,6 +78,10 @@ const userSchema = new mongoose.Schema({
     author: String,
     savedAt: Date,
   }],
+  likedArticles: [{
+    type: mongoose.Schema.ObjectId,
+    ref: 'Article',
+  }],
 }, {
   timestamps: true // createdAt dan updatedAt otomatis
 });

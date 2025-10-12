@@ -1,4 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import axios from "axios";
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -37,6 +38,7 @@ export interface Article {
   createdAt: string;
   updatedAt: string;
   slug: string;
+  isLikedByMe?: boolean; // Optional field to indicate if the article is liked by the current user
 }
 
 export interface CreateArticleData {
@@ -74,6 +76,33 @@ export interface ArticleResponse {
   message?: string;
 }
 
+export interface LikeResponse {
+  success: boolean;
+  data: {
+    likes: number;
+    liked: boolean; 
+  };
+  message?: string;
+}
+
+export interface LikeToggleResponse {
+  success: boolean;
+  data: {
+    isLiked: boolean;
+    totalLikes: number;
+  };
+  message: string;
+}
+
+export interface ViewResponse {
+  success: boolean;
+  data: {
+    viewsIncremented: boolean;
+    becameFeatured: boolean;
+  };
+  message: string;
+}
+
 // Get all articles
 export const getAllArticles = async (params?: {
   page?: number;
@@ -107,7 +136,12 @@ export const getAllArticles = async (params?: {
 
 // Get article by ID
 export const getArticleById = async (id: string): Promise<ArticleResponse> => {
-  const response = await fetch(`${API_BASE_URL}/articles/${id}`);
+  // Ambil token secara pasif, kirim jika ada.
+  const headers = getAuthHeaders(); 
+  
+  const response = await fetch(`${API_BASE_URL}/articles/${id}`, {
+    headers: headers 
+  });
   
   if (!response.ok) {
     throw new Error('Failed to fetch article');
@@ -224,15 +258,46 @@ export const deleteArticle = async (id: string): Promise<{ success: boolean; mes
 };
 
 // Like article
-export const likeArticle = async (id: string): Promise<{ success: boolean; data: { likes: number } }> => {
-  const response = await fetch(`${API_BASE_URL}/articles/${id}/like`, {
+// export const likeArticle = async (id: string): Promise<LikeResponse> => {
+//   const response = await fetch(`${API_BASE_URL}/articles/${id}/like`, {
+//     method: 'POST',
+//     headers: getAuthHeaders()
+//   });
+  
+//   if (!response.ok) {
+//     const errorData = await response.json();
+//     throw new Error(errorData.message || 'Gagal memberikan like');
+//   }
+  
+//   return response.json();
+// };
+
+export const viewArticle = async (id: string): Promise<ViewResponse> => {
+  const response = await fetch(`${API_BASE_URL}/articles/${id}/view`, {
     method: 'POST',
     headers: getAuthHeaders()
   });
-  
+
   if (!response.ok) {
-    throw new Error('Failed to like article');
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Gagal mencatat view artikel');
   }
-  
+
+  return response.json();
+};
+
+export const toggleArticleLike = async (articleId: string): Promise<LikeToggleResponse> => {
+  // Menggunakan route yang benar (articles/:id/like) dan method POST (sudah terproteksi di Backend)
+  const response = await fetch(`${API_BASE_URL}/articles/${articleId}/like`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Gagal memproses suka artikel');
+  }
+
+  // Asumsi respons dari Backend sesuai dengan LikeToggleResponse
   return response.json();
 };

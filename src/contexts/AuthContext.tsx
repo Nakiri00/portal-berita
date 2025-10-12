@@ -469,9 +469,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 }, [isLoggedIn, userProfile, getAuthHeaders]);
 
-  const unsaveArticle = React.useCallback((articleId: string) => {
-    setSavedArticles(prev => prev.filter(article => article.articleId !== articleId));
-  }, []);
+  const unsaveArticle = React.useCallback(async (articleId: string) => {
+  
+  // Update local state + localStorage dulu (Optimistic update)
+  setSavedArticles(prev => {
+    const updated = prev.filter(article => article.articleId !== articleId);
+    // localStorage.setItem(SAVED_KEY(userProfile?._id), JSON.stringify(updated)); // Panggilan ini dipindahkan ke useEffect yang mengamati savedArticles
+    return updated;
+  });
+
+  // Sync ke server
+  if (isLoggedIn) {
+    try {
+      // Panggil endpoint DELETE dengan articleId di path
+      const response = await fetch(`${API_BASE_URL}/saved-articles/${articleId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Gagal hapus artikel dari server:", errorData.message);
+        // Logika untuk revert state di sini jika Anda tidak menganggap ini error kritis
+      }
+
+    } catch (err) {
+      console.error("Gagal hapus artikel dari server:", err);
+      // Logika untuk revert state di sini jika Anda tidak menganggap ini error kritis
+    }
+  }
+}, [isLoggedIn, userProfile, getAuthHeaders]);
 
   const isArticleSaved = React.useCallback((articleId: string) => {
     return savedArticles.some(article => article.articleId === articleId);

@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, Calendar, User, Eye, Share2, Bookmark, Heart, BookmarkCheck, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { CommentSection } from './CommentSection';
 import { toast } from 'sonner';
-import { useArticles } from '../contexts/ArticleContext';
+import { useArticles, Article as LocalArticle, mapApiToLocalArticle } from '../contexts/ArticleContext';
 import { getWriterProfile } from '../services/userService'; // Import service untuk ambil Bio
-import { getArticleById, likeArticle, Article as ApiArticleType } from '../services/articleService'; // Import service
+import { getArticleById,  viewArticle , toggleArticleLike, Article as ApiArticleType } from '../services/articleService'; // Import service
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 // Definisikan tipe untuk data penulis yang diperlukan
@@ -21,11 +21,11 @@ interface ArticlePageProps {
   onBackClick: () => void;
   onAuthorClick: (authorId: string) => void;
   isLoggedIn: boolean;
-  onAddToHistory: (articleId: string, title: string) => void;
+//   onAddToHistory: (articleId: string, title: string) => void;
   onSaveArticle: (article: any) => void;
   onUnsaveArticle: (articleId: string) => void;
   isArticleSaved: (articleId: string) => boolean;
-  onLogout?: () => void; // <--- PERBAIKAN: DIUBAH MENJADI OPSIONAL
+  onLogout?: () => void; 
 }
 
 export function ArticlePage({ 
@@ -33,69 +33,121 @@ export function ArticlePage({
   onBackClick, 
   onAuthorClick, 
   isLoggedIn,
-  onAddToHistory,
+//   onAddToHistory,
   onSaveArticle,
   onUnsaveArticle,
   isArticleSaved,
   onLogout 
 }: ArticlePageProps) {
-    
+    const [articleData, setArticleData] = useState<LocalArticle | null>(null);
     const [isLiked, setIsLiked] = useState(false);
-    const [likeCount, setLikeCount] = useState(0);
+    const [likeCount, setLikeCount] = useState(0); // Inisialisasi dengan 0 atau nilai awal yang sesuai
     const [authorBioData, setAuthorBioData] = useState<ArticleAuthor | null>(null);
-
-    // Context Hook
-    const { publishedArticles, incrementReadCount } = useArticles();
-
+    const {fetchArticles} = useArticles(); // Fungsi untuk refresh articles
     // Cari artikel dari published articles
-    let article = publishedArticles.find(a => a.id === articleId);
+//     let article = publishedArticles.find(a => a.id === articleId);
+    const handleLike = useCallback(async () => {
+        // if (!articleData) return;
+        if (!isLoggedIn) {
+            toast.error('Silakan login terlebih dahulu');
+            return;
+        }
+        
+        // 1. Optimistic UI Update
+        const prevIsLiked = isLiked;
+        const prevLikeCount = likeCount;
+        setIsLiked(prev => !prev);
+        setLikeCount(prev => prev + (prevIsLiked ? -1 : 1));
+        try {
+            // 2. Panggil API Toggle
+            const response = await toggleArticleLike(articleId);
+            if (response.success) {
+                // 3. Update state berdasarkan respons server
+                setIsLiked(response.data.isLiked);
+                setLikeCount(response.data.totalLikes);
+                toast.success(response.data.isLiked ? 'Artikel disukai' : 'Like dibatalkan');
+                // 4. Update list artikel global agar hitungan like di homepage juga berubah
+                fetchArticles(); 
+            } else {
+                // 3b. Revert state jika gagal dari server
+                setIsLiked(prevIsLiked);
+                setLikeCount(prevLikeCount);
+                toast.error(response.message || 'Gagal memproses like artikel');
+            }
+        } catch (error) {
+            // 3c. Revert state jika gagal total (network error)
+            setIsLiked(prevIsLiked);
+            setLikeCount(prevLikeCount);
+            console.error("Like toggle error:", error);
+            toast.error('Terjadi kesalahan koneksi saat memproses like.');
+        }
+    }, [articleId, isLoggedIn, isLiked, likeCount, fetchArticles]);
 
     useEffect(() => {
-
-        if (!article || !article.authorId) return; 
-
-        const fetchAuthorBio = async () => {
+        let isCancelled = false;
+        
+        const fetchAndLogArticle = async () => {
             try {
-                // Menggunakan service yang sudah kita buat
-                const profile = await getWriterProfile(article.authorId);
+                // 1. Fetch Artikel API (masih menghasilkan ApiArticleType)
+                const articleResponse = await getArticleById(articleId);
+                console.log("🔍 API Response:", articleResponse.data.article);
+                const fetchedApiArticle = articleResponse.data.article; 
                 
-                setAuthorBioData({
-                    name: profile.name,
-                    avatar: profile.avatar.url,
-                    bio: profile.bio 
-                });
+                if (isCancelled) return;
+                
+                // 2. MAPPING DATA API KE TIPE CONTEXT
+                const mappedArticle = mapApiToLocalArticle(fetchedApiArticle);
+                
+                // 3. Set State Artikel, Like Count, dan Like Status dari MAPPED data
+                setArticleData(mappedArticle);
+                setLikeCount(mappedArticle.likes);
+                setIsLiked(mappedArticle.isLikedByMe || false); 
 
+                // 4. Log View (Conditional)
+                if (isLoggedIn) {
+                    const viewRes = await viewArticle(articleId);
+                    
+                    if (viewRes.data.becameFeatured) {
+                        toast.info(`🎉 Artikel "${mappedArticle.title}" telah menjadi HEADLINE!`);
+                        fetchArticles(); // Refresh list global
+                    }
+                    
+                    if (viewRes.data.viewsIncremented) {
+                         setArticleData(prev => prev ? ({ 
+                             ...prev, 
+                             readCount: prev.readCount + 1, // Update readCount di Context type
+                         }) : null);
+                    }
+                }
+                
+                // 5. Fetch Bio
+                if (fetchedApiArticle.author?._id) { // Gunakan fetchedApiArticle untuk ID penulis
+                    const profile = await getWriterProfile(fetchedApiArticle.author._id);
+                    if (!isCancelled) {
+                        setAuthorBioData({
+                            name: profile.name,
+                            avatar: profile.avatar.url,
+                            bio: profile.bio 
+                        });
+                    }
+                }
             } catch (error) {
-                console.error("Gagal mengambil data bio penulis:", error);
-                setAuthorBioData({
-                    name: article.author,
-                    avatar: '',
-                    bio: 'Gagal memuat bio penulis dari server.'
-                });
+                console.error("Gagal memuat artikel atau memproses view:", error);
+                if (!isCancelled) {
+                    toast.error('Gagal memuat artikel atau terjadi masalah.');
+                    setArticleData(null); 
+                }
             }
         };
 
-        fetchAuthorBio();
-    }, [article?.authorId]); 
+        if (articleId) {
+            fetchAndLogArticle();
+        }
 
+        return () => { isCancelled = true; };
+    }, [articleId, isLoggedIn, fetchArticles]); 
 
-    // --- EFFECT UNTUK HISTORY & READ COUNT (HOOKS TETAP DI ATAS) ---
-  useEffect(() => {
-    // HANYA JALANKAN JIKA ARTIKEL SUDAH DITEMUKAN
-    if (!article) return;
-    if (isLoggedIn) {
-      onAddToHistory(articleId, article.title);
-    }
-    // Increment read count for published articles
-    if (publishedArticles.find(a => a.id === articleId)) {
-      // Simulate realistic user reading behavior - increment after 3 seconds
-      const timer = setTimeout(() => {
-        incrementReadCount(articleId);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [article, articleId, isLoggedIn, onAddToHistory, publishedArticles, incrementReadCount]);
-  if (!article) {
+  if (!articleData) {
     return (
         <div className="max-w-4xl mx-auto px-4 py-16 text-center text-gray-500">
             <h1 className="text-3xl font-bold mb-4">Memuat Artikel...</h1>
@@ -104,33 +156,19 @@ export function ArticlePage({
     );
   }
     
-    // ... LANJUTKAN DENGAN KODE RENDERING NORMAL ...
-    
-  const currentArticle = article!;
+  const currentArticle = articleData;
   const isSaved = isArticleSaved(articleId);
-    
-    // Tentukan data penulis yang akan ditampilkan (prioritas dari fetch API)
     const displayAuthor = authorBioData || { 
         name: currentArticle.author, 
         bio: 'Memuat bio...', 
         avatar: '' 
     };
 
-    // --- HANDLERS (Tidak Berubah) ---
-  const handleLogoutClick = () => {
-    // Pengecekan agar tidak error jika onLogout tidak didefinisikan
-    if (onLogout) {
-        onLogout();
-    }
-    window.location.replace('/');
-  };
-    
   const handleSave = () => {
     if (!isLoggedIn) {
       toast.error('Silakan login terlebih dahulu');
       return;
     }
-    
     if (isSaved) {
       onUnsaveArticle(articleId);
       toast.success('Artikel dihapus dari tersimpan');
@@ -146,16 +184,6 @@ export function ArticlePage({
       });
       toast.success('Artikel berhasil disimpan');
     }
-  };
-
-  const handleLike = () => {
-    if (!isLoggedIn) {
-      toast.error('Silakan login terlebih dahulu');
-      return;
-    }
-    setIsLiked(!isLiked);
-    setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
-    toast.success(isLiked ? 'Like dibatalkan' : 'Artikel disukai');
   };
 
   const handleShare = async () => {
@@ -176,12 +204,6 @@ export function ArticlePage({
     const authorId = currentArticle.authorId || 'default-author';
     onAuthorClick(authorId);
   };
-
-  const handleHomeClick = () => {
-    // Most reliable home navigation method
-    window.location.href = '/';
-  };
-
 
   return (
     <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
@@ -304,8 +326,8 @@ export function ArticlePage({
                       {currentArticle.author}
                     </button>
                     <p className="text-gray-700">
-    {displayAuthor.bio || 'Penulis ini belum menambahkan deskripsi diri. Nantikan artikel-artikel menarik lainnya!'} 
-  </p>
+                        {displayAuthor.bio || 'Penulis ini belum menambahkan deskripsi diri. Nantikan artikel-artikel menarik lainnya!'} 
+                      </p>
                   </div>
                   <Button 
                     onClick={handleAuthorProfileClick}
