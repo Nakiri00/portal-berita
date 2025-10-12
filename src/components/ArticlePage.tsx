@@ -90,7 +90,6 @@ export function ArticlePage({
             try {
                 // 1. Fetch Artikel API (masih menghasilkan ApiArticleType)
                 const articleResponse = await getArticleById(articleId);
-                console.log("🔍 API Response:", articleResponse.data.article);
                 const fetchedApiArticle = articleResponse.data.article; 
                 
                 if (isCancelled) return;
