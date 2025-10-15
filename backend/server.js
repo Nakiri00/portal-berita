@@ -19,6 +19,7 @@ const articleRoutes = require('./routes/articles');
 const userRoutes = require('./routes/users');
 const readingHistoryRoutes = require("./routes/readingHistory");
 const savedArticlesRoutes = require("./routes/savedArticles");
+const commentRoutes = require('./routes/comments');
 // Connect to MongoDB
 connectDB();
 
@@ -34,6 +35,7 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage });
+
 
 // Security middleware
 app.use(helmet());
@@ -120,6 +122,7 @@ app.use('/api/articles', articleRoutes);
 app.use('/api/user', userRoutes);
 app.use("/api/reading-history", readingHistoryRoutes);
 app.use("/api/saved-articles", savedArticlesRoutes);
+app.use('/api/comments', commentRoutes);
 
 // 404 handler
 app.use((req, res) => {

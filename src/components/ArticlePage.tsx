@@ -344,7 +344,7 @@ export function ArticlePage({
       </article>
 
       {/* Comment Section */}
-      <CommentSection />
+      <CommentSection articleId={articleId} /> 
     </main>
   );
 }

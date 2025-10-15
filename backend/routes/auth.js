@@ -9,6 +9,9 @@ const {
   logout
 } = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
+
 
 // Public routes
 router.post('/register', register);
@@ -19,5 +22,6 @@ router.get('/profile', authenticate, getProfile);
 router.put('/profile', authenticate, updateProfile);
 router.put('/change-password', authenticate, changePassword);
 router.post('/logout', authenticate, logout);
+
 
 module.exports = router;

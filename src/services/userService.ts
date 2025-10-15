@@ -19,6 +19,13 @@ interface UserProfileResponse {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('portal_token');
+  return {
+    'Authorization': token ? `Bearer ${token}` : '',
+  };
+};
+
 // Fungsi untuk mengambil profil penulis
 export const getWriterProfile = async (userId: string): Promise<WriterProfile> => {
   try {
@@ -31,4 +38,21 @@ export const getWriterProfile = async (userId: string): Promise<WriterProfile> =
     }
     throw new Error('Terjadi kesalahan jaringan.');
   }
+};
+
+export const updateProfile = async (formData: FormData) => {
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+  const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+    method: 'PUT',
+    headers: getAuthHeaders(), // Headers tanpa Content-Type: application/json
+    body: formData // Langsung kirim FormData
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Gagal memperbarui profil');
+  }
+
+  return response.json();
 };

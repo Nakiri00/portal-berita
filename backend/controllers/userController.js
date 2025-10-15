@@ -97,7 +97,6 @@ const toggleArticleLike = async (req, res, next) => {
   }
 };
 
-
 module.exports = {
     getUserProfile,
     toggleArticleLike

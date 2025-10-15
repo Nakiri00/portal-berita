@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { commentSchema } = require('./CommentSchema'); 
 
 const articleSchema = new mongoose.Schema({
   title: {
@@ -86,7 +87,8 @@ const articleSchema = new mongoose.Schema({
   readingTime: {
     type: Number, // in minutes
     default: 0
-  }
+  },
+  comments: [commentSchema] 
 }, {
   timestamps: true // createdAt dan updatedAt otomatis
 });

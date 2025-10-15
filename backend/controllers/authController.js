@@ -142,12 +142,36 @@ const updateProfile = async (req, res) => {
     const updateData = {};
     if (name) updateData.name = name;
     if (bio !== undefined) updateData.bio = bio;
-    if (avatar !== undefined) updateData.avatar = avatar;
-    if (socialLinks) updateData.socialLinks = socialLinks;
+    if (req.file) { 
+        updateData.avatar = `/uploads/avatars/${req.file.filename}`; 
+    } else if (avatar !== undefined) {
+        updateData.avatar = avatar; 
+    }
+  
+    if (socialLinks) {
+        let links = socialLinks;
+        if (typeof socialLinks === 'string') {
+            try {
+                links = JSON.parse(socialLinks);
+            } catch (e) {
+                console.error("Failed to parse socialLinks JSON:", e);
+                links = null;
+            }
+        }
+        
+        if (links && typeof links === 'object') {
+            if (links.instagram !== undefined) updateData['socialLinks.instagram'] = links.instagram;
+            if (links.facebook !== undefined) updateData['socialLinks.facebook'] = links.facebook;
+            if (links.threads !== undefined) updateData['socialLinks.threads'] = links.threads;
+        }
+    }
+    if (Object.keys(updateData).length === 0) {
+    }
+
 
     const user = await User.findByIdAndUpdate(
       userId,
-      updateData,
+      updateData, // Gunakan updateData dengan dot notation
       { new: true, runValidators: true }
     );
 
@@ -167,6 +191,7 @@ const updateProfile = async (req, res) => {
     });
   }
 };
+
 
 // Change password
 const changePassword = async (req, res) => {
@@ -237,6 +262,7 @@ const logout = async (req, res) => {
     });
   }
 };
+
 
 module.exports = {
   register,
