@@ -7,7 +7,6 @@ const session = require('express-session');
 const passport = require('./config/passport');
 const connectDB = require('./config/database');
 const errorMiddleware = require('./middleware/error');
-const multer = require('multer');
 const path = require('path');
 // Import routes
 const Article = require('./models/Article');
@@ -20,21 +19,30 @@ const userRoutes = require('./routes/users');
 const readingHistoryRoutes = require("./routes/readingHistory");
 const savedArticlesRoutes = require("./routes/savedArticles");
 const commentRoutes = require('./routes/comments');
+const { uploadArticle } = require('./middleware/uploads');
 // Connect to MongoDB
 connectDB();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const uploadPath = path.join(__dirname, '..', 'src', 'uploads');
+const uploadPath = path.join(__dirname, '..', 'src', 'uploads'); 
 app.use('/uploads', express.static(uploadPath));
-const storage = multer.diskStorage({
-  destination: uploadPath,
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${file.fieldname}-${Date.now()}${ext}`);
-  }
+app.post('/articles', uploadArticle, async (req, res) => {
+  const { title, content, category, tags, status, excerpt } = req.body;
+  const imageFile = req.file; 
+
+  const newArticle = await Article.create({
+    title,
+    content,
+    category,
+    tags: JSON.parse(tags),
+    status,
+    excerpt,
+    featuredImage: imageFile ? `/uploads/thumbnails/${req.file.filename}` : null
+  });
+
+  res.json(newArticle);
 });
-const upload = multer({ storage });
 
 
 // Security middleware
@@ -72,22 +80,7 @@ app.use(session({
 // Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
-app.post('/articles', upload.single('imageFile'), async (req, res) => {
-  const { title, content, category, tags, status, excerpt } = req.body;
-  const imageFile = req.file; // file fisik di server
 
-  const newArticle = await Article.create({
-    title,
-    content,
-    category,
-    tags: JSON.parse(tags),
-    status,
-    excerpt,
-    featuredImage: imageFile ? `/uploads/${req.file.filename}` : null
-  });
-
-  res.json(newArticle);
-});
 
 // app.get('/api', (req, res) => {
 //   res.json({

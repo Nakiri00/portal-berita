@@ -279,7 +279,7 @@ const createArticle = async (req, res) => {
       excerpt,
       category: category || 'berita',
       tags: tags ? JSON.parse(tags) : [],
-      featuredImage: imageFile ? `/uploads/${imageFile.filename}` : null,
+      featuredImage: imageFile ? `/uploads/thumbnails/${imageFile.filename}` : null,
       status,
       author: req.user.id,
       authorName: author.name,
