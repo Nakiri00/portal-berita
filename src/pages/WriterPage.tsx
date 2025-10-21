@@ -4,7 +4,9 @@ import {
   createArticle, 
   getWriterArticles, 
   Article,
-  CreateArticleData 
+  CreateArticleData ,
+  updateArticle,
+  deleteArticle
 } from '../services/articleService';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -13,22 +15,34 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
 import { Label } from '../components/ui/label';
-import { Plus, Save, Image as ImageIcon, Trash2, FileText, Loader2 } from 'lucide-react';
+import { Plus, Save, Image as ImageIcon, Trash2, FileText, Loader2,Pencil,X } from 'lucide-react';
 
 // Definisikan tipe untuk data form lokal
 interface ArticleForm extends CreateArticleData {
     imageFile: File | null;
     imagePreview: string; 
     tags: string[];
+    articleId?: string;
 }
 
 // Daftar tags yang tersedia
 const AVAILABLE_TAGS = ['Akademik', 'Kehidupan Kampus', 'Tips & Trik', 'Beasiswa', 'Karir', 'Lainnya'];
-
+const toTitleCase = (str: string): string => {
+    if (!str) return '';
+    return str.replace(
+        /\w\S*/g,
+        function(txt) {
+            // Mengubah huruf pertama menjadi Kapital, dan sisanya menjadi lowercase
+            return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+        }
+    );
+};
 export function WriterPage() {
   const { userProfile, isWriter } = useAuth();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false); // State baru untuk mode edit
+  const [originalImage, setOriginalImage] = useState(''); // State baru untuk menyimpan URL gambar lama
   const [formData, setFormData] = useState<ArticleForm>({
     title: '',
     content: '',
@@ -40,6 +54,62 @@ export function WriterPage() {
     imagePreview: ''
   });
   const [submitting, setSubmitting] = useState(false);
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      content: '',
+      category: 'berita',
+      tags: [],
+      status: 'draft',
+      featuredImage: '',
+      imageFile: null,
+      imagePreview: '',
+      articleId: undefined, // Reset ID artikel
+    });
+    setOriginalImage('');
+    setIsEditing(false);
+    const fileInput = document.getElementById('imageFile') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
+  };
+
+  
+  const handleEditClick = (article: Article) => {
+        const currentImageUrl = article.featuredImage || '';
+        
+        let rawTags = article.tags || [];
+        let parsedTags: string[] = [];
+
+        // 1. Parsing tags yang terlanjur rusak di database (seperti "[\"akademik\"]")
+        if (rawTags.length === 1 && typeof rawTags[0] === 'string' && rawTags[0].startsWith('[')) {
+            try {
+                const temp = JSON.parse(rawTags[0]);
+                if (Array.isArray(temp)) {
+                     rawTags = temp;
+                }
+            } catch (e) {
+                console.warn("Failed to parse corrupted tag string:", rawTags[0]);
+            }
+        }
+        parsedTags = rawTags
+            .filter(tag => typeof tag === 'string' && tag.trim() !== '')
+            .map(tag => toTitleCase(tag)); // FIX: Gunakan TitleCase
+
+        setFormData({
+            title: article.title,
+            content: article.content,
+            category: toTitleCase(article.category) || 'berita', 
+            tags: parsedTags, 
+            status: article.status,
+            featuredImage: currentImageUrl, 
+            imageFile: null,
+            imagePreview: currentImageUrl ? currentImageUrl.split('/').pop() || 'Gambar Saat Ini' : '',
+            articleId: article._id,
+        });
+        
+        setOriginalImage(currentImageUrl);
+        setIsEditing(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
   useEffect(() => {
     if (isWriter) {
@@ -94,6 +164,8 @@ export function WriterPage() {
         imagePreview: '', 
         featuredImage: '' 
     }));
+
+    setOriginalImage('');
   };
 
   const handleTagToggle = (tag: string) => {
@@ -120,46 +192,63 @@ export function WriterPage() {
     }
 
     const primaryCategory = formData.tags.length > 0 ? formData.tags[0] : 'berita';
+    const isUpdate = !!formData.articleId;
+    const dataToSend: any = { 
+      title: formData.title,
+      content: formData.content,
+      category: primaryCategory.toLowerCase(),
+      tags: formData.tags,
+      status: formData.status ?? 'draft',
+      excerpt: formData.content.substring(0, 150) + '...',
+    };
 
-    // Pakai FormData untuk mengirim file + data lainnya
-    const formDataToSend = new FormData();
-    formDataToSend.append('title', formData.title);
-    formDataToSend.append('content', formData.content);
-    formDataToSend.append('category', primaryCategory.toLowerCase());
-    formDataToSend.append('tags', JSON.stringify(formData.tags));
-    formDataToSend.append('status', formData.status ?? 'draft');
-    formDataToSend.append('excerpt', formData.content.substring(0, 150) + '...');
-    
-    if (formData.imageFile) {
-      formDataToSend.append('imageFile', formData.imageFile);
+    if (isUpdate && !formData.imageFile && originalImage) {
+      dataToSend.featuredImage = originalImage;
+    } else if (formData.imageFile) {
+      dataToSend.featuredImage = formData.imageFile;
     }
 
     try {
       setSubmitting(true);
-      await createArticle(formDataToSend); 
-      toast.success('Artikel berhasil dibuat');
-
-      // Reset form
-      setFormData({
-        title: '',
-        content: '',
-        category: 'berita',
-        tags: [],
-        status: 'draft',
-        featuredImage: '',
-        imageFile: null,
-        imagePreview: ''
-      });
-      
-      const fileInput = document.getElementById('imageFile') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
-      
+      if (isUpdate && formData.articleId) {
+          await updateArticle(formData.articleId, dataToSend); 
+          toast.success('Artikel berhasil diupdate');
+      } else {
+          const formDataToSend = new FormData();
+            formDataToSend.append('title', dataToSend.title);
+            formDataToSend.append('content', dataToSend.content);
+            formDataToSend.append('category', dataToSend.category);
+            formDataToSend.append('tags', JSON.stringify(dataToSend.tags));
+            formDataToSend.append('status', dataToSend.status ?? 'draft');
+            formDataToSend.append('excerpt', dataToSend.content.substring(0, 150) + '...');
+        
+            if (dataToSend.featuredImage instanceof File) {
+                formDataToSend.append('imageFile', dataToSend.featuredImage); 
+            }
+            
+            await createArticle(formDataToSend);
+            toast.success('Artikel berhasil dibuat');
+      }
+      resetForm();
       await loadArticles();
     } catch (error: any) {
       console.error('Error saving article:', error);
       toast.error(error.message || 'Gagal menyimpan artikel');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (articleId: string, title: string) => {
+    if (window.confirm(`Yakin ingin menghapus artikel: "${title}"? Tindakan ini tidak dapat dibatalkan.`)) {
+      try {
+        await deleteArticle(articleId);
+        toast.success('Artikel berhasil dihapus.');
+        loadArticles(); // Refresh daftar
+      } catch (error: any) {
+        console.error('Error deleting article:', error);
+        toast.error(error.message || 'Gagal menghapus artikel');
+      }
     }
   };
 
@@ -192,11 +281,25 @@ export function WriterPage() {
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Tulis Artikel */}
         <Card>
-          <CardHeader>
+          <CardHeader className='flex flex-row items-center justify-between'>
             <CardTitle className="flex items-center">
-              <Plus className="w-5 h-5 mr-2" />
-              Tulis Artikel Baru
+              {isEditing ? (
+                <Pencil className="w-5 h-5 mr-2" />
+              ) : (
+                <Plus className="w-5 h-5 mr-2" />
+              )}
+              {isEditing ? 'Edit Artikel' : 'Tulis Artikel Baru'}
             </CardTitle>
+            {isEditing && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={resetForm} 
+                className="text-red-500 hover:text-red-700"
+                >
+                <X className="h-4 w-4 mr-1" /> Batalkan Edit
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -216,40 +319,53 @@ export function WriterPage() {
                 <Label className="block text-sm font-medium text-gray-700 mb-2">
                   Gambar Thumbnail
                 </Label>
-                {formData.imageFile ? (
-                    <div className="relative flex items-center justify-between p-3 border rounded-lg bg-gray-50">
-                        <div className="flex items-center space-x-2 truncate">
-                            <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                            <span className="text-sm font-medium truncate">{formData.imagePreview}</span>
-                        </div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:bg-red-50"
-                            onClick={removeImage}
-                            disabled={submitting}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                {/* Kondisi untuk menampilkan gambar yang ada saat EDIT */}
+                {isEditing && originalImage && !formData.imageFile ? (
+                  <div className="mb-2">
+                    <p className="text-xs text-gray-500 mb-1">Gambar saat ini:</p>
+                    <img 
+                      src={originalImage} // URL gambar lama
+                      alt="Current Thumbnail" 
+                      className="h-20 w-auto object-cover rounded-md"
+                    />
+                  </div>
+                ) : null} 
+                {formData.imageFile || (isEditing && originalImage && !formData.imageFile) ? (
+                  <div className="relative flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                    <div className="flex items-center space-x-2 truncate">
+                      <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                        <span className="text-sm font-medium truncate">
+                          {formData.imageFile ? formData.imagePreview : originalImage.split('/').pop()}
+                        </span>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-500 hover:bg-red-50"
+                      onClick={removeImage}
+                      disabled={submitting}
+                    >
+                    <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 ) : (
-                    <Label htmlFor="imageFile" className="cursor-pointer block">
-                        <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
-                            <input
-                                id="imageFile"
-                                type="file"
-                                accept="image/jpeg, image/png, image/jpg"
-                                onChange={handleImageUpload}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
-                                disabled={submitting}
-                            />
-                            <div className="flex flex-col items-center justify-center pointer-events-none">
-                                <ImageIcon className="h-6 w-6 mx-auto mb-2 text-gray-500" />
-                                <p className="text-sm font-medium text-gray-700">Klik untuk Pilih Gambar</p>
-                                <p className="text-xs text-gray-500 mt-1">(Maks. 5MB, JPG/PNG/JPEG)</p>
-                            </div>
-                        </div>
-                    </Label>
+                  <Label htmlFor="imageFile" className="cursor-pointer block">
+                    <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+                      <input
+                        id="imageFile"
+                        type="file"
+                        accept="image/jpeg, image/png, image/jpg"
+                        onChange={handleImageUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                        disabled={submitting}
+                      />
+                      <div className="flex flex-col items-center justify-center pointer-events-none">
+                        <ImageIcon className="h-6 w-6 mx-auto mb-2 text-gray-500" />
+                        <p className="text-sm font-medium text-gray-700">Klik untuk Pilih Gambar</p>
+                        <p className="text-xs text-gray-500 mt-1">(Maks. 5MB, JPG/PNG/JPEG)</p>
+                      </div>
+                    </div>
+                  </Label>
                 )}
               </div>
               <div>
@@ -362,21 +478,46 @@ export function WriterPage() {
             ) : (
               <div className="space-y-4">
                 {articles.map((article) => (
-                  <div key={article._id} className="border rounded-lg p-4">
-                    <h3 className="font-semibold text-lg mb-2">{article.title}</h3>
-                    <div className="flex items-center space-x-4 text-sm text-gray-500 mb-2">
-                      <span>Status: </span>
-                      <Badge className={article.status === 'published' ? 'bg-green-500' : 'bg-gray-500'}>
+                  <div key={article._id} className="border rounded-lg p-4 flex justify-between items-center">
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2">{article.title}</h3>
+                      <div className="flex items-center space-x-4 text-sm text-gray-500 mb-2">
+                        <span>Status: </span>
+                        <Badge 
+                          className="text-xs"
+                          variant={article.status === 'published' ? 'default' : 'outline'}
+                          >
                         {article.status}
-                      </Badge>
-                      <span>Views: {article.views}</span>
+                        </Badge>
+                        <span>Views: {article.views}</span>
+                      </div>
+                        <p className="text-gray-600 text-sm line-clamp-2">
+                          {article.excerpt}
+                        </p>
                     </div>
-                    <p className="text-gray-600 text-sm line-clamp-2">
-                      {article.excerpt}
-                    </p>
+                    <div className="flex space-x-2 flex-shrink-0">
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => handleEditClick(article)}
+                        title="Edit Artikel"
+                        disabled={submitting}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="destructive" 
+                        size="icon"
+                        onClick={() => handleDelete(article._id, article.title)}
+                        title="Hapus Artikel"
+                        disabled={submitting}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
-              </div>
+            </div>
             )}
           </CardContent>
         </Card>

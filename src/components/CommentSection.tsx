@@ -60,47 +60,22 @@ const CommentItem: React.FC<CommentItemProps> = ({
             toast.error('Silakan login untuk membalas.');
             return;
         }
+        if (!replyText.trim()) {
+            toast.error('Balasan tidak boleh kosong.');
+            return;
+        }
+
         try {
-            const currentItemId = data._id; 
+            const targetCommentId = data._id; 
             
-            let targetCommentId: string;
-            let targetReplyId: string | undefined;
+            await onReply(targetCommentId, replyText); 
 
-            if (isReply) {
-                // Jika ini adalah Balasan:
-                // targetCommentId adalah ID Induk (dari props commentId)
-                // targetReplyId adalah ID Balasan itu sendiri (dari data._id)
-                if (!commentId) {
-                    console.error("Missing parent comment ID for a reply.");
-                    return; 
-                }
-                targetCommentId = commentId; 
-                targetReplyId = currentItemId;
-            } else {
-                // Jika ini adalah Komentar Utama:
-                // targetCommentId adalah ID Komentar itu sendiri (dari data._id)
-                targetCommentId = currentItemId;
-                targetReplyId = undefined;
-            }
-
-            // Panggil service dengan parameter yang benar
-            const result = await toggleCommentLike(
-                articleId, 
-                targetCommentId, 
-                targetReplyId
-            );
-
-            // Update state lokal
-            setIsLiked(result.isLiked);
-            setLikesCount(result.totalLikes);
-
-            // Opsional: Beri tahu parent (CommentSection) jika Anda ingin memperbarui
-            // seluruh array komentar secara global setelah toggle like.
-            // onLikeToggle(targetCommentId, targetReplyId, result.isLiked, result.totalLikes); 
-
+            setReplyText('');
+            setIsReplying(false);
+            
         } catch (error) {
-            console.error('Gagal toggle like:', error);
-            toast.error('Gagal memproses like. Coba lagi.');
+            console.error('Gagal mengirim balasan:', error);
+            toast.error('Gagal mengirim balasan. Coba lagi.');
         }
     };
 

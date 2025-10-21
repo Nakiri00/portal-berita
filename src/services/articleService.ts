@@ -38,7 +38,7 @@ export interface Article {
   createdAt: string;
   updatedAt: string;
   slug: string;
-  isLikedByMe?: boolean; // Optional field to indicate if the article is liked by the current user
+  isLikedByMe?: boolean;
 }
 
 export interface CreateArticleData {
@@ -53,7 +53,15 @@ export interface CreateArticleData {
   seoDescription?: string;
 }
 
-export interface UpdateArticleData extends Partial<CreateArticleData> {}
+interface UpdateArticleData {
+    title: string;
+    content: string;
+    excerpt?: string;
+    category: string;
+    tags?: string[];
+    status?: 'draft' | 'published' | 'archived';
+    featuredImage?: File | string; 
+}
 
 export interface ArticlesResponse {
   success: boolean;
@@ -227,19 +235,46 @@ export const createArticle = async (articleData: FormData) => {
 };
 
 // Update article
-export const updateArticle = async (id: string, articleData: UpdateArticleData): Promise<ArticleResponse> => {
-  const response = await fetch(`${API_BASE_URL}/articles/writer/${id}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(articleData)
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || 'Failed to update article');
-  }
-  
-  return response.json();
+export const updateArticle = async (articleId: string, articleData: UpdateArticleData) => {
+    const token = localStorage.getItem('portal_token');
+    if (!token) {
+        throw new Error('Autentikasi diperlukan.');
+    }
+
+    // Karena kita mengizinkan upload file, kita harus menggunakan FormData
+    const formData = new FormData();
+    formData.append('title', articleData.title);
+    formData.append('content', articleData.content);
+    formData.append('category', articleData.category);
+    formData.append('excerpt', articleData.excerpt || '');
+    if (articleData.tags && Array.isArray(articleData.tags)) {
+        articleData.tags.forEach(tag => {
+             formData.append('tags[]', tag); 
+        });
+    }
+    if (articleData.status) {
+        formData.append('status', articleData.status);
+    }
+    if (articleData.featuredImage instanceof File) {
+        formData.append('imageFile', articleData.featuredImage); 
+    } else if (typeof articleData.featuredImage === 'string' && articleData.featuredImage === '') {
+        formData.append('featuredImage', '');
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/articles/writer/${articleId}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Gagal mengupdate artikel');
+    }
+
+    return response.json();
 };
 
 // Delete article

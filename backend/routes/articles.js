@@ -29,7 +29,7 @@ router.post('/:id/like', toggleArticleLike); // POST /api/articles/:id/like
 router.post('/:id/view', logArticleViewAndIncrement); // POST /api/articles/:id/view 
 router.get('/writer/my-articles', getWriterArticles); // GET /api/articles/writer/my-articles
 router.post('/writer/create', authenticate, uploadArticle, createArticle); // POST /api/articles/writer/create
-router.put('/writer/:id', updateArticle); // PUT /api/articles/writer/:id
+router.put('/writer/:id', uploadArticle, updateArticle); // PUT /api/articles/writer/:id
 router.delete('/writer/:id', deleteArticle); // DELETE /api/articles/writer/:id
 
 module.exports = router;

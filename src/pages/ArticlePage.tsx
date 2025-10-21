@@ -36,7 +36,7 @@ export function ArticlePage() {
       onBackClick={handleBackClick}
       onAuthorClick={handleAuthorClick}
       isLoggedIn={isLoggedIn}
-      // onAddToHistory={addToReadingHistory}
+      onAddToHistory={addToReadingHistory}
       onSaveArticle={saveArticle}
       onUnsaveArticle={unsaveArticle}
       isArticleSaved={isArticleSaved}

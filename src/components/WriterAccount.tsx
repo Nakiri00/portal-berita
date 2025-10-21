@@ -18,6 +18,7 @@ interface WriterAccountProps {
   onArticleClick: (articleId: string) => void;
 }
 
+
 export function WriterAccount({ userProfile, onUpdateProfile, onArticleClick }: WriterAccountProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditing, setIsEditing] = useState(false);

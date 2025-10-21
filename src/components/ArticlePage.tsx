@@ -21,7 +21,7 @@ interface ArticlePageProps {
   onBackClick: () => void;
   onAuthorClick: (authorId: string) => void;
   isLoggedIn: boolean;
-//   onAddToHistory: (articleId: string, title: string) => void;
+  onAddToHistory: (articleId: string, title: string) => void;
   onSaveArticle: (article: any) => void;
   onUnsaveArticle: (articleId: string) => void;
   isArticleSaved: (articleId: string) => boolean;
@@ -33,7 +33,7 @@ export function ArticlePage({
   onBackClick, 
   onAuthorClick, 
   isLoggedIn,
-//   onAddToHistory,
+  onAddToHistory,
   onSaveArticle,
   onUnsaveArticle,
   isArticleSaved,
@@ -117,10 +117,12 @@ export function ArticlePage({
                              readCount: prev.readCount + 1, // Update readCount di Context type
                          }) : null);
                     }
+                    // Tambah ke history pembaca
+                    onAddToHistory(articleId, mappedArticle.title);
                 }
                 
                 // 5. Fetch Bio
-                if (fetchedApiArticle.author?._id) { // Gunakan fetchedApiArticle untuk ID penulis
+                if (fetchedApiArticle.author?._id) { 
                     const profile = await getWriterProfile(fetchedApiArticle.author._id);
                     if (!isCancelled) {
                         setAuthorBioData({
@@ -144,7 +146,7 @@ export function ArticlePage({
         }
 
         return () => { isCancelled = true; };
-    }, [articleId, isLoggedIn, fetchArticles]); 
+    }, [articleId, isLoggedIn, fetchArticles,onAddToHistory]); 
 
   if (!articleData) {
     return (

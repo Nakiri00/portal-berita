@@ -1,5 +1,9 @@
 const Article = require('../models/Article');
 const User = require('../models/User');
+const catchAsyncErrors = require('../middleware/catchAsyncErrors');
+const ErrorHandler = require('../utils/errorHandler');
+const fs = require('fs');
+const path = require('path');
 
 // Get all articles (public)
 const getAllArticles = async (req, res) => {
@@ -307,69 +311,69 @@ const createArticle = async (req, res) => {
 };
 
 // Update article
-const updateArticle = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const {
-      title,
-      content,
-      excerpt,
-      category,
-      tags,
-      featuredImage,
-      status,
-      seoTitle,
-      seoDescription
-    } = req.body;
+const updateArticle = catchAsyncErrors(async (req, res, next) => {
+    let article = await Article.findById(req.params.id);
 
-    // Check if article exists and belongs to user
-    const article = await Article.findById(id);
+    // 1. Cek keberadaan artikel
     if (!article) {
-      return res.status(404).json({
-        success: false,
-        message: 'Artikel tidak ditemukan'
-      });
+        return next(new ErrorHandler('Artikel tidak ditemukan', 404));
     }
 
-    // Check if user is the author or admin
-    if (article.author.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Anda tidak memiliki akses untuk mengedit artikel ini'
-      });
+    // Simpan status lama
+    const oldStatus = article.status;
+    // Ambil status baru dari request body
+    const newStatus = req.body.status;
+    if (oldStatus !== 'published' && newStatus === 'published') {
+        req.body.publishedAt = Date.now();
     }
 
-    // Update fields
-    const updateData = {};
-    if (title !== undefined) updateData.title = title;
-    if (content !== undefined) updateData.content = content;
-    if (excerpt !== undefined) updateData.excerpt = excerpt;
-    if (category !== undefined) updateData.category = category;
-    if (tags !== undefined) updateData.tags = tags;
-    if (featuredImage !== undefined) updateData.featuredImage = featuredImage;
-    if (status !== undefined) updateData.status = status;
-    if (seoTitle !== undefined) updateData.seoTitle = seoTitle;
-    if (seoDescription !== undefined) updateData.seoDescription = seoDescription;
 
-    const updatedArticle = await Article.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('author', 'name email avatar');
+    // 2. Otorisasi: Penulis hanya dapat mengedit artikel mereka sendiri
+    const isWriter = req.user.role === 'writer';
+    const isAdmin = req.user.role === 'admin';
 
-    res.json({
-      success: true,
-      message: 'Artikel berhasil diupdate',
-      data: { article: updatedArticle }
+    if (isWriter && article.author.toString() !== req.user.id) {
+        return next(new ErrorHandler('Anda tidak memiliki izin untuk mengupdate artikel ini', 403));
+    }
+    let imageUpdate = {};
+    if (req.file) {
+        if (article.featuredImage) { 
+            const oldImagePath = path.join(__dirname, '..', article.featuredImage);
+            if (fs.existsSync(oldImagePath)) {
+                fs.unlinkSync(oldImagePath);
+            }
+        }
+        imageUpdate.featuredImage = `/uploads/thumbnails/${req.file.filename}`; 
+    } else if (req.body.featuredImage === '') {
+        if (article.featuredImage) {
+            const oldImagePath = path.join(__dirname, '..', article.featuredImage);
+            if (fs.existsSync(oldImagePath)) {
+                fs.unlinkSync(oldImagePath);
+            }
+        }
+        imageUpdate.featuredImage = '';
+        delete req.body.featuredImage;
+    }
+
+    // 4. Update Artikel
+    const updatedData = {
+        ...req.body,
+        ...imageUpdate,
+        updatedAt: Date.now()
+    };
+
+    article = await Article.findByIdAndUpdate(req.params.id, updatedData, {
+        new: true, 
+        runValidators: true,
+        useFindAndModify: false
     });
-  } catch (error) {
-    console.error('Update article error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Gagal mengupdate artikel'
+
+    res.status(200).json({
+        success: true,
+        message: 'Artikel berhasil diperbarui',
+        article
     });
-  }
-};
+});
 
 // Delete article
 const deleteArticle = async (req, res) => {
