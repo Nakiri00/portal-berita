@@ -154,6 +154,10 @@ articleSchema.pre('save', function(next) {
   if (this.isModified('status') && this.status === 'published' && !this.publishedAt) {
     this.publishedAt = new Date();
   }
+
+  if (this.isModified('views') && this.views > 500 && !this.isFeatured) {
+    this.isFeatured = true;
+  }
   
   next();
 });

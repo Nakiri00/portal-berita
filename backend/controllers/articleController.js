@@ -136,7 +136,7 @@ const logArticleViewAndIncrement = async (req, res) => {
       // 1. Belum pernah baca -> Increment view
       article.views += 1;
       viewsIncremented = true;
-      if (article.views >= 50 && !article.isFeatured) {
+      if (article.views >= 500 && !article.isFeatured) {
         article.isFeatured = true;
         becameFeatured = true;
       }
@@ -265,7 +265,7 @@ const getWriterArticles = async (req, res) => {
 const createArticle = async (req, res) => {
   try {
     // Data datang dari body (JSON), termasuk Base64 di featuredImage
-    const { title, content, excerpt, category, tags, status = 'draft', seoTitle, seoDescription } = req.body;
+    const { title, content, excerpt, category, tags, status = 'draft', seoTitle, seoDescription, isFeatured } = req.body;
     const imageFile = req.file; // <-- file fisik di server
 
     if (!title || !content) {
@@ -274,7 +274,7 @@ const createArticle = async (req, res) => {
 
     const author = await User.findById(req.user.id);
     if (!author) return res.status(404).json({ success: false, message: 'Author tidak ditemukan' });
-
+    const featuredStatus = (isFeatured === 'true' || isFeatured === true);
 
     // Create article
     const article = new Article({
@@ -288,7 +288,8 @@ const createArticle = async (req, res) => {
       author: req.user.id,
       authorName: author.name,
       seoTitle,
-      seoDescription
+      seoDescription,
+      isFeatured: featuredStatus
     });
 
     await article.save();
@@ -355,6 +356,10 @@ const updateArticle = catchAsyncErrors(async (req, res, next) => {
         delete req.body.featuredImage;
     }
 
+    if (req.body.isFeatured !== undefined) {
+      req.body.isFeatured = (req.body.isFeatured === true || req.body.isFeatured === 'true');
+    }
+
     // 4. Update Artikel
     const updatedData = {
         ...req.body,
@@ -362,16 +367,54 @@ const updateArticle = catchAsyncErrors(async (req, res, next) => {
         updatedAt: Date.now()
     };
 
+   const updatedArticle = await Article.findByIdAndUpdate(req.params.id, updatedData, {
+        new: true, 
+        runValidators: true,
+        useFindAndModify: false
+    }).populate('author', 'name email avatar');
+
+    // Lakukan update pada Article
     article = await Article.findByIdAndUpdate(req.params.id, updatedData, {
         new: true, 
         runValidators: true,
         useFindAndModify: false
     });
 
+    const articleIdString = article._id.toString();
+    const firstTag = article.tags && article.tags.length > 0 ? article.tags[0] : article.category;
+    const authorName = article.authorName; // Ambil nama penulis
+    await User.updateMany(
+      { "readingHistory.articleId": articleIdString },
+      { 
+        $set: { 
+          "readingHistory.$[elem].title": article.title,
+          "readingHistory.$[elem].excerpt": article.excerpt 
+        } 
+      },
+      {
+        arrayFilters: [{ "elem.articleId": articleIdString }]
+      }
+    );
+    await User.updateMany(
+      { "savedArticles.articleId": articleIdString },
+      { 
+        $set: { 
+          "savedArticles.$[elem].title": article.title,
+          "savedArticles.$[elem].excerpt": article.excerpt, 
+          "savedArticles.$[elem].imageUrl": article.featuredImage, 
+          "savedArticles.$[elem].tag": firstTag,
+          "savedArticles.$[elem].author": authorName 
+        } 
+      },
+      {
+        arrayFilters: [{ "elem.articleId": articleIdString }]
+      }
+    );
+
     res.status(200).json({
         success: true,
         message: 'Artikel berhasil diperbarui',
-        article
+        data: { article: updatedArticle }
     });
 });
 
@@ -380,7 +423,7 @@ const deleteArticle = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Check if article exists and belongs to user
+    // 1. Cari Artikel
     const article = await Article.findById(id);
     if (!article) {
       return res.status(404).json({
@@ -389,7 +432,7 @@ const deleteArticle = async (req, res) => {
       });
     }
 
-    // Check if user is the author or admin
+    // 2. Cek Otorisasi
     if (article.author.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
@@ -397,11 +440,47 @@ const deleteArticle = async (req, res) => {
       });
     }
 
+    const articleIdString = id.toString();
+
+    // 3. PEMBERSHAN DATA (CLEANUP) DARI SEMUA USER
+    // Hapus dari Reading History semua user
+    await User.updateMany(
+        {}, // Targetkan semua user
+        { $pull: { 
+            readingHistory: { articleId: articleIdString } 
+        } }
+    );
+
+    // Hapus dari Saved Articles (Bookmark) semua user
+    await User.updateMany(
+        {}, // Targetkan semua user
+        { $pull: { 
+            savedArticles: { articleId: articleIdString } 
+        } }
+    );
+    
+    // Hapus referensi dari likedArticles (jika ada)
+    await User.updateMany(
+        {},
+        { $pull: {
+            likedArticles: articleIdString // $pull untuk ObjectId di array
+        } }
+    );
+
+    // 4. Hapus Gambar Fisik (jika ada)
+    if (article.featuredImage) {
+        const imagePath = path.join(__dirname, '..', article.featuredImage);
+        if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath);
+        }
+    }
+
+    // 5. Hapus Artikel
     await Article.findByIdAndDelete(id);
 
     res.json({
       success: true,
-      message: 'Artikel berhasil dihapus'
+      message: 'Artikel berhasil dihapus dan data pengguna terkait dibersihkan.'
     });
   } catch (error) {
     console.error('Delete article error:', error);

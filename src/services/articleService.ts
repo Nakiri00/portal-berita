@@ -51,6 +51,7 @@ export interface CreateArticleData {
   status?: 'draft' | 'published' | 'archived';
   seoTitle?: string;
   seoDescription?: string;
+  isFeatured?: boolean;
 }
 
 interface UpdateArticleData {
@@ -61,6 +62,7 @@ interface UpdateArticleData {
     tags?: string[];
     status?: 'draft' | 'published' | 'archived';
     featuredImage?: File | string; 
+    isFeatured?: boolean;
 }
 
 export interface ArticlesResponse {
@@ -259,6 +261,9 @@ export const updateArticle = async (articleId: string, articleData: UpdateArticl
         formData.append('imageFile', articleData.featuredImage); 
     } else if (typeof articleData.featuredImage === 'string' && articleData.featuredImage === '') {
         formData.append('featuredImage', '');
+    }
+    if (articleData.isFeatured !== undefined) {
+        formData.append('isFeatured', articleData.isFeatured.toString());
     }
     
     const response = await fetch(`${API_BASE_URL}/articles/writer/${articleId}`, {

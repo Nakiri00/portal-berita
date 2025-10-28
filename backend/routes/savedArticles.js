@@ -5,7 +5,12 @@ const {authenticate} = require("../middleware/auth");
 
 // GET saved articles
 router.get("/", authenticate, async (req, res) => {
-// ... (Logika GET tetap sama)
+  try {
+    const user = await User.findById(req.user._id, "savedArticles");
+    res.json({ success: true, articles: user.savedArticles });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Gagal mengambil artikel yang disimpan" });
+  }
 });
 
 // POST save article (Logika lama yang HANYA MENYIMPAN jika belum ada)

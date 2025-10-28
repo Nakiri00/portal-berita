@@ -139,7 +139,7 @@ export function HomePage({
       {/* Page Header */}
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-          {pageTitle || (selectedTag ? `Artikel ${selectedTag}` : (searchQuery ? 'Hasil Pencarian' : 'Beranda'))}
+          {pageTitle || (selectedTag ? `Artikel ${selectedTag}` : (searchQuery ? 'Hasil Pencarian' : 'Daftar Artikel'))}
         </h1>
         {pageDescription && (
           <p className="text-gray-600">{pageDescription}</p>

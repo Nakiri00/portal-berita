@@ -15,8 +15,9 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
 import { Label } from '../components/ui/label';
-import { Plus, Save, Image as ImageIcon, Trash2, FileText, Loader2,Pencil,X } from 'lucide-react';
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Plus, Save, Image as ImageIcon, Trash2, FileText, Loader2,Pencil,X, Star} from 'lucide-react';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog'; 
 // Definisikan tipe untuk data form lokal
 interface ArticleForm extends CreateArticleData {
     imageFile: File | null;
@@ -38,11 +39,13 @@ const toTitleCase = (str: string): string => {
     );
 };
 export function WriterPage() {
-  const { userProfile, isWriter } = useAuth();
+  const { userProfile, isWriter, refreshUser } = useAuth();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false); // State baru untuk mode edit
   const [originalImage, setOriginalImage] = useState(''); // State baru untuk menyimpan URL gambar lama
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [articleToDelete, setArticleToDelete] = useState<{ id: string; title: string } | null>(null);
   const [formData, setFormData] = useState<ArticleForm>({
     title: '',
     content: '',
@@ -50,6 +53,7 @@ export function WriterPage() {
     tags: [],
     status: 'draft',
     featuredImage: '', 
+    isFeatured: false,
     imageFile: null,
     imagePreview: ''
   });
@@ -62,6 +66,7 @@ export function WriterPage() {
       tags: [],
       status: 'draft',
       featuredImage: '',
+      isFeatured: false,
       imageFile: null,
       imagePreview: '',
       articleId: undefined, // Reset ID artikel
@@ -101,6 +106,7 @@ export function WriterPage() {
             tags: parsedTags, 
             status: article.status,
             featuredImage: currentImageUrl, 
+            isFeatured: article.isFeatured || false,
             imageFile: null,
             imagePreview: currentImageUrl ? currentImageUrl.split('/').pop() || 'Gambar Saat Ini' : '',
             articleId: article._id,
@@ -193,12 +199,24 @@ export function WriterPage() {
 
     const primaryCategory = formData.tags.length > 0 ? formData.tags[0] : 'berita';
     const isUpdate = !!formData.articleId;
+    if (!isUpdate) {
+        if (!formData.imageFile) {
+            toast.error('Wajib melampirkan Gambar untuk Thumbnail.');
+            return;
+        }
+    } else {
+        if (!originalImage && !formData.imageFile) {
+            toast.error('Wajib ada Gambar Thumbnail. Silakan upload gambar atau pastikan gambar lama ada.');
+            return;
+        }
+    }
     const dataToSend: any = { 
       title: formData.title,
       content: formData.content,
       category: primaryCategory.toLowerCase(),
       tags: formData.tags,
       status: formData.status ?? 'draft',
+      isFeatured: formData.isFeatured,
       excerpt: formData.content.substring(0, 150) + '...',
     };
 
@@ -213,6 +231,11 @@ export function WriterPage() {
       if (isUpdate && formData.articleId) {
           await updateArticle(formData.articleId, dataToSend); 
           toast.success('Artikel berhasil diupdate');
+          if (refreshUser) {
+                await refreshUser();
+            } else {
+                console.warn("syncUserData tidak tersedia di AuthContext."); 
+            }
       } else {
           const formDataToSend = new FormData();
             formDataToSend.append('title', dataToSend.title);
@@ -220,6 +243,7 @@ export function WriterPage() {
             formDataToSend.append('category', dataToSend.category);
             formDataToSend.append('tags', JSON.stringify(dataToSend.tags));
             formDataToSend.append('status', dataToSend.status ?? 'draft');
+            formDataToSend.append('isFeatured', dataToSend.isFeatured.toString());
             formDataToSend.append('excerpt', dataToSend.content.substring(0, 150) + '...');
         
             if (dataToSend.featuredImage instanceof File) {
@@ -239,17 +263,43 @@ export function WriterPage() {
     }
   };
 
-  const handleDelete = async (articleId: string, title: string) => {
-    if (window.confirm(`Yakin ingin menghapus artikel: "${title}"? Tindakan ini tidak dapat dibatalkan.`)) {
+  // const handleDelete = async (articleId: string, title: string) => {
+  //   if (window.confirm(`Yakin ingin menghapus artikel: "${title}"? Tindakan ini tidak dapat dibatalkan.`)) {
+  //     try {
+  //       await deleteArticle(articleId);
+  //       toast.success('Artikel berhasil dihapus.');
+  //       loadArticles(); // Refresh daftar
+  //     } catch (error: any) {
+  //       console.error('Error deleting article:', error);
+  //       toast.error(error.message || 'Gagal menghapus artikel');
+  //     }
+  //   }
+  // };
+
+  const handleConfirmDelete = (articleId: string, title: string) => {
+      setArticleToDelete({ id: articleId, title });
+      setIsDeleteDialogOpen(true);
+  };
+    
+  const executeDelete = async () => {
+      if (!articleToDelete) return;
       try {
-        await deleteArticle(articleId);
-        toast.success('Artikel berhasil dihapus.');
-        loadArticles(); // Refresh daftar
+          setSubmitting(true);
+          await deleteArticle(articleToDelete.id);
+          if (refreshUser) {
+              await refreshUser(); 
+          }
+          
+          toast.success('Artikel berhasil dihapus dan data pengguna terkait dibersihkan.');
+          loadArticles(); // Refresh daftar
       } catch (error: any) {
-        console.error('Error deleting article:', error);
-        toast.error(error.message || 'Gagal menghapus artikel');
+          console.error('Error deleting article:', error);
+          toast.error(error.message || 'Gagal menghapus artikel');
+      } finally {
+          setIsDeleteDialogOpen(false);
+          setArticleToDelete(null);
+          setSubmitting(false);
       }
-    }
   };
 
   if (!isWriter) {
@@ -269,6 +319,14 @@ export function WriterPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {articleToDelete && (
+        <ConfirmDeleteDialog
+          isOpen={isDeleteDialogOpen}
+          onClose={() => setIsDeleteDialogOpen(false)}
+          onConfirm={executeDelete}
+          articleTitle={articleToDelete.title}
+        />
+      )}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Dashboard Penulis
@@ -442,7 +500,41 @@ export function WriterPage() {
                     )}
                 </CardContent>
             </Card>
-
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center">
+                  <Star className="h-4 w-4 mr-2 text-yellow-500 fill-yellow-500" />
+                    Featured / Headline
+                  </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label>Jadikan Artikel Unggulan?</Label>
+                    <Select 
+                      value={formData.isFeatured ? 'true' : 'false'} 
+                      onValueChange={(value) => {
+                        console.log("Raw value:", value);
+                        const boolValue = value === 'true';
+                        console.log("Parsed bool:", boolValue);
+                        setFormData(prev => ({ ...prev, isFeatured: boolValue }));
+                        console.log("FormData setelah set:", { ...formData, isFeatured: boolValue });
+                      }}
+                      disabled={submitting}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih status unggulan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="false">Tidak (Default)</SelectItem>
+                        <SelectItem value="true">Ya, Jadikan Featured</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Artikel unggulan akan ditampilkan di halaman utama (seperti carousel utama).
+                    </p>
+                  </div>
+              </CardContent>
+            </Card>
             <Card>
                 <CardHeader>
                     <CardTitle className="text-lg">Info Artikel</CardTitle>
@@ -508,7 +600,7 @@ export function WriterPage() {
                       <Button 
                         variant="destructive" 
                         size="icon"
-                        onClick={() => handleDelete(article._id, article.title)}
+                        onClick={() => handleConfirmDelete(article._id, article.title)}
                         title="Hapus Artikel"
                         disabled={submitting}
                       >

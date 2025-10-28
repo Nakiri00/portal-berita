@@ -57,6 +57,7 @@ interface AuthContextType {
   addWriterArticle: (article: any) => void;
   updateWriterArticle: (articleId: string, article: any) => void;
   deleteWriterArticle: (articleId: string) => void;
+  refreshUser: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -87,6 +88,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const refreshUser = React.useCallback(async (): Promise<boolean> => {
+    const token = localStorage.getItem('portal_token');
+    if (!token) return false;
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          const user = data.data.user;
+          const role = user.role;
+          
+          // 1. Update Profile menggunakan setUserProfile
+          setUserProfile({
+            ...user,
+            joinDate: new Date(user.createdAt).toLocaleDateString('id-ID')
+          });
+          setIsLoggedIn(true);
+          setIsAdmin(role === 'admin');
+          setIsWriter(role === 'writer' || role === 'admin');
+
+          // 2. Fetch and Update Saved Articles (Data yang Terupdate di Backend)
+          const resSaved = await fetch(`${API_BASE_URL}/saved-articles`, { 
+            headers: { 'Authorization': `Bearer ${token}` } 
+          });
+          const savedData = await resSaved.json();
+          if (savedData.success) {
+            setSavedArticles(savedData.articles);
+            localStorage.setItem(SAVED_KEY(user._id), JSON.stringify(savedData.articles));
+          }
+
+          // 3. Fetch and Update Reading History (Data yang Terupdate di Backend)
+          const resHistory = await fetch(`${API_BASE_URL}/reading-history`, { 
+            headers: { 'Authorization': `Bearer ${token}` } 
+          });
+          const historyData = await resHistory.json();
+          if (historyData.success) {
+            setReadingHistory(historyData.history);
+            localStorage.setItem(HISTORY_KEY(user._id), JSON.stringify(historyData.history));
+          }
+
+          setLoading(false);
+          return true;
+        }
+      }
+      
+      localStorage.removeItem('portal_token');
+      setIsLoggedIn(false);
+      setUserProfile(null);
+      setLoading(false);
+      return false;
+    } catch (error) {
+      console.error('Refresh user failed:', error);
+      setLoading(false);
+      return false;
+    }
+  }, []);
+
+
   // Verify token with API (didefinisikan di awal karena digunakan di useEffect)
   const verifyToken = React.useCallback(async (token: string) => {
     try {
@@ -110,14 +176,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // LOGIKA ROLE DIPISAH
           setIsAdmin(role === 'admin');
           setIsWriter(role === 'writer' || role === 'admin');
+          return { success: true, user: data.data.user };
         }
       } else {
         // Token invalid, remove it
         localStorage.removeItem('portal_token');
       }
+      return { success: false };
     } catch (error) {
       console.error('Token verification failed:', error);
       localStorage.removeItem('portal_token');
+      return { success: false };
     }
   }, []); 
 
@@ -374,32 +443,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [savedArticles, userProfile]);
 
   useEffect(() => {
-  if (isLoggedIn && userProfile?._id) {
-    (async () => {
-      try {
-        // Fetch saved articles dari DB
-        const resSaved = await fetch(`${API_BASE_URL}/saved-articles`, { headers: getAuthHeaders() });
-        const savedData = await resSaved.json();
+  // Hanya jalankan ketika user berhasil login dan ID pengguna tersedia
+    if (isLoggedIn && userProfile?._id) {
+      (async () => {
+        // Panggil refreshUser untuk memuat data history/bookmark.
+        // Kita tidak perlu menunggu userProfile di sini karena kita sudah memiliki ID-nya
+        // dan refreshUser akan menggunakan token yang tersedia.
+        const token = localStorage.getItem('portal_token');
+        if (token) {
+          await refreshUser(); 
+        }
+      })();
+    }
+    
+    // Dependensi: HANYA bergantung pada status login dan ID pengguna
+    // JANGAN sertakan refreshUser atau userProfile sebagai objek penuh di sini.
+  }, [isLoggedIn, userProfile?._id]);
+
+//   useEffect(() => {
+//   if (isLoggedIn && userProfile?._id) {
+//     (async () => {
+//       try {
+//         // Fetch saved articles dari DB
+//         const resSaved = await fetch(`${API_BASE_URL}/saved-articles`, { headers: getAuthHeaders() });
+//         const savedData = await resSaved.json();
         
-        if (savedData.success) {
-          setSavedArticles(savedData.articles);
-          localStorage.setItem(SAVED_KEY(userProfile._id), JSON.stringify(savedData.articles));
-        }
+//         if (savedData.success) {
+//           setSavedArticles(savedData.articles);
+//           localStorage.setItem(SAVED_KEY(userProfile._id), JSON.stringify(savedData.articles));
+//         }
 
-        // Fetch reading history dari DB
-        const resHistory = await fetch(`${API_BASE_URL}/reading-history`, { headers: getAuthHeaders() });
-        const historyData = await resHistory.json();
+//         // Fetch reading history dari DB
+//         const resHistory = await fetch(`${API_BASE_URL}/reading-history`, { headers: getAuthHeaders() });
+//         const historyData = await resHistory.json();
 
-        if (historyData.success) {
-          setReadingHistory(historyData.history);
-          localStorage.setItem(HISTORY_KEY(userProfile._id), JSON.stringify(historyData.history));
-        }
-      } catch (e) {
-        console.error("Gagal sync data user:", e);
-      }
-    })();
-  }
-}, [isLoggedIn, userProfile, getAuthHeaders]);
+//         if (historyData.success) {
+//           setReadingHistory(historyData.history);
+//           localStorage.setItem(HISTORY_KEY(userProfile._id), JSON.stringify(historyData.history));
+//         }
+//       } catch (e) {
+//         console.error("Gagal sync data user:", e);
+//       }
+//     })();
+//   }
+// }, [isLoggedIn, userProfile, getAuthHeaders]);
 
   // Perbaikan: Pastikan fungsi-fungsi ini di-wrap dengan useCallback
   const followAuthor = React.useCallback((authorId: string) => {
@@ -575,7 +662,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isArticleSaved,
     addWriterArticle,
     updateWriterArticle,
-    deleteWriterArticle
+    deleteWriterArticle,
+    refreshUser
   }), [
     isLoggedIn, 
     isWriter, 
@@ -601,7 +689,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isArticleSaved, 
     addWriterArticle, 
     updateWriterArticle, 
-    deleteWriterArticle
+    deleteWriterArticle,
+    refreshUser
   ]);
 
   return (
