@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-interface UserProfile {
+export interface UserProfile {
   _id: string;
   name: string;
   email: string;
@@ -13,7 +13,7 @@ interface UserProfile {
   role?: 'user' | 'writer' | 'admin';
 }
 
-interface ReadHistory {
+export interface ReadHistory {
   articleId: string;
   title: string;
   readDate: string;
@@ -21,7 +21,7 @@ interface ReadHistory {
   readCount: number;
 }
 
-interface SavedArticle {
+export interface SavedArticle {
   articleId: string;
   title: string;
   excerpt: string;

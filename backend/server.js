@@ -117,6 +117,7 @@ app.use("/api/reading-history", readingHistoryRoutes);
 app.use("/api/saved-articles", savedArticlesRoutes);
 app.use('/api/comments', commentRoutes);
 
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({

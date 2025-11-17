@@ -6,7 +6,8 @@ const {
   updateUserRole,
   deactivateUser,
   activateUser,
-  getUserStats
+  getUserStats,
+  createWriter
 } = require('../controllers/adminController');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 
@@ -20,6 +21,8 @@ router.get('/users/:userId', getUserById);
 router.put('/users/:userId/role', updateUserRole);
 router.put('/users/:userId/deactivate', deactivateUser);
 router.put('/users/:userId/activate', activateUser);
+router.post('/writer', createWriter);
+
 
 // Statistics
 router.get('/stats', getUserStats);

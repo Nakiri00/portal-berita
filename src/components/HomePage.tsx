@@ -4,7 +4,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useArticles } from '../contexts/ArticleContext';
-
+import { Link } from 'react-router-dom';
 interface Article {
   id: string;
   title: string;
@@ -267,11 +267,21 @@ export function HomePage({
           {/* Regular News Grid */}
           <section>
             <div className="mb-4 sm:mb-6">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-                {selectedTag || searchQuery ? 'Artikel' : 'Berita Terbaru'}
-              </h2>
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+                  {selectedTag || searchQuery ? 'Artikel' : 'Berita Terbaru'}
+                </h2>
+                <Button asChild variant="outline" size="sm" className="hover:bg-blue-50 hover:border-blue-300" >
+                  <Link to="/articles">
+                    Lihat Semua
+                  </Link>
+                </Button>
+              </div>
+            
               <p className="text-sm sm:text-base text-gray-600">
-                {filteredArticles.length} artikel ditemukan
+                {selectedTag || searchQuery
+                  ? `${filteredArticles.length} artikel ditemukan`
+                  : 'Artikel terbaru yang dipublikasikan'}
               </p>
             </div>
             

@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Trash2, RefreshCw, Users, Shield } from 'lucide-react';
+import {
+  RefreshCw,
+  Users,
+  Shield,
+  ArrowLeft,
+  ArrowRight,
+  Plus,
+} from 'lucide-react';
+import { CreateWriterForm } from '../components/CreateWriterForm';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 
 interface UserData {
   _id: string;
@@ -19,26 +28,28 @@ interface UserData {
 export function AdminPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'writer' | 'admin' | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalWriters: 0,
     totalAdmins: 0,
     usersThisMonth: 0,
-    recentUsers: 0
+    recentUsers: 0,
   });
 
-  // API Base URL
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10;
 
-  // Load users from API
+  // Load users
   const loadUsers = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('portal_token');
       const response = await fetch(`${API_BASE_URL}/admin/users`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
@@ -47,7 +58,7 @@ export function AdminPage() {
           const formattedUsers = data.data.users.map((user: any) => ({
             ...user,
             joinDate: new Date(user.createdAt).toLocaleDateString('id-ID'),
-            lastLogin: new Date(user.lastLogin).toLocaleString('id-ID')
+            lastLogin: new Date(user.lastLogin).toLocaleString('id-ID'),
           }));
           setUsers(formattedUsers);
         }
@@ -59,14 +70,12 @@ export function AdminPage() {
     }
   };
 
-  // Load statistics
+  // Load stats
   const loadStats = async () => {
     try {
       const token = localStorage.getItem('portal_token');
       const response = await fetch(`${API_BASE_URL}/admin/stats`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
@@ -92,10 +101,37 @@ export function AdminPage() {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'admin': return 'bg-red-100 text-red-800';
-      case 'writer': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'admin':
+        return 'bg-red-100 text-red-800';
+      case 'writer':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  // Filtering logic
+  const filteredUsers = users.filter((u) => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'writer') return u.role === 'writer';
+    if (activeFilter === 'admin') return u.role === 'admin';
+    return true;
+  });
+
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const displayedUsers = filteredUsers.slice(
+    (currentPage - 1) * usersPerPage,
+    currentPage * usersPerPage
+  );
+
+  const handleCardClick = (filter: 'all' | 'writer' | 'admin') => {
+    setActiveFilter(filter);
+    setCurrentPage(1);
+    setActiveTab('users');
+  };
+
+  const handleAddWriterClick = () => {
+    setActiveTab('create_writer');
   };
 
   return (
@@ -105,139 +141,177 @@ export function AdminPage() {
           <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
           <p className="text-gray-600">Kelola data pengguna website</p>
         </div>
-        <div className="space-x-2">
-          <Button onClick={refreshData} variant="outline" disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
+
+        <Button onClick={refreshData} variant="outline" disabled={loading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Users className="h-8 w-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Users</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Users className="h-8 w-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Writers</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalWriters}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Shield className="h-8 w-8 text-red-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Admins</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalAdmins}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Users className="h-8 w-8 text-purple-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">This Month</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.usersThisMonth}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Users className="h-8 w-8 text-orange-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Recent (7d)</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.recentUsers}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          {/* <TabsTrigger value="users">Manajemen User</TabsTrigger> */}
+          {/* <TabsTrigger value="create_writer">Tambah Penulis</TabsTrigger> */}
+        </TabsList>
 
-      {/* Users List */}
-      {users.length > 0 ? (
-        <div className="space-y-4">
-          {users.map((user, index) => (
-            <Card key={index}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                      <span className="text-lg font-semibold text-gray-600">
-                        {user.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{user.name}</h3>
-                      <p className="text-gray-600">{user.email}</p>
-                      <p className="text-sm text-gray-500">
-                        Bergabung: {user.joinDate} | Login: {user.lastLogin}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={getRoleColor(user.role)}>
-                      {user.role.toUpperCase()}
-                    </Badge>
-                    {!user.isActive && (
-                      <Badge variant="outline" className="text-red-600 border-red-600">
-                        INACTIVE
-                      </Badge>
-                    )}
-                  </div>
+        {/* TAB 1: OVERVIEW */}
+        <TabsContent value="overview">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 my-6">
+
+            {/* Total Users */}
+            <Card
+              onClick={() => handleCardClick('all')}
+              className="cursor-pointer hover:shadow-lg transition"
+            >
+              <CardContent className="p-6 flex items-center">
+                <Users className="h-8 w-8 text-blue-600" />
+                <div className="ml-4">
+                  <p className="text-sm text-gray-600">Total Users</p>
+                  <p className="text-2xl font-bold">{stats.totalUsers}</p>
                 </div>
-                {user.bio && (
-                  <div className="mt-4 pt-4 border-t">
-                    <p className="text-gray-600">{user.bio}</p>
-                  </div>
-                )}
               </CardContent>
             </Card>
-          ))}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Belum ada user</h3>
-            <p className="text-gray-500">
-              User yang login akan muncul di sini. Data tersimpan di localStorage browser.
-            </p>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Info Box */}
-      <Card className="mt-6">
-        <CardContent className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Informasi</h3>
-          <div className="text-sm text-gray-600 space-y-2">
-            <p>• Data user disimpan di MongoDB database</p>
-            <p>• Data tersimpan permanen dan aman</p>
-            <p>• Admin dapat mengelola semua user</p>
-            <p>• Sistem menggunakan JWT authentication</p>
-            <p>• Backend API: {API_BASE_URL}</p>
+            {/* Writers */}
+            <Card
+              onClick={() => handleCardClick('writer')}
+              className="cursor-pointer hover:shadow-lg transition"
+            >
+              <CardContent className="p-6 flex items-center">
+                <Users className="h-8 w-8 text-green-600" />
+                <div className="ml-4">
+                  <p className="text-sm text-gray-600">Writers</p>
+                  <p className="text-2xl font-bold">{stats.totalWriters}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Admins */}
+            <Card
+              onClick={() => handleCardClick('admin')}
+              className="cursor-pointer hover:shadow-lg transition"
+            >
+              <CardContent className="p-6 flex items-center">
+                <Shield className="h-8 w-8 text-red-600" />
+                <div className="ml-4">
+                  <p className="text-sm text-gray-600">Admins</p>
+                  <p className="text-2xl font-bold">{stats.totalAdmins}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* This Month - NOT clickable */}
+            <Card>
+              <CardContent className="p-6 flex items-center">
+                <Users className="h-8 w-8 text-purple-600" />
+                <div className="ml-4">
+                  <p className="text-sm text-gray-600">This Month</p>
+                  <p className="text-2xl font-bold">{stats.usersThisMonth}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent - NOT clickable */}
+            <Card>
+              <CardContent className="p-6 flex items-center">
+                <Users className="h-8 w-8 text-orange-600" />
+                <div className="ml-4">
+                  <p className="text-sm text-gray-600">Recent (7d)</p>
+                  <p className="text-2xl font-bold">{stats.recentUsers}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tambah Penulis */}
+            <Card
+              onClick={handleAddWriterClick}
+              className="cursor-pointer hover:shadow-lg transition bg-blue-50"
+            >
+              <CardContent className="p-6 flex items-center">
+                <Plus className="h-8 w-8 text-blue-600" />
+                <div className="ml-4">
+                  <p className="text-sm text-gray-600">Tambah Penulis Baru</p>
+                  <p className="text-lg font-semibold text-blue-800">Buat Penulis</p>
+                </div>
+              </CardContent>
+            </Card>
+
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        {/* TAB 2: USERS */}
+        <TabsContent value="users">
+          {loading ? (
+            <p>Memuat data user...</p>
+          ) : filteredUsers.length > 0 ? (
+            <div className="space-y-4 mt-6">
+              {displayedUsers.map((user) => (
+                <Card key={user._id}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                          <span className="text-lg font-semibold text-gray-600">
+                            {user.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold">{user.name}</h3>
+                          <p className="text-gray-600">{user.email}</p>
+                          <p className="text-sm text-gray-500">
+                            Bergabung: {user.joinDate} | Login: {user.lastLogin}
+                          </p>
+                        </div>
+                      </div>
+
+                      <Badge className={getRoleColor(user.role)}>
+                        {user.role.toUpperCase()}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" /> Sebelumnya
+                  </Button>
+
+                  <span className="text-sm text-gray-600">
+                    Halaman {currentPage} dari {totalPages}
+                  </span>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    Berikutnya <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Card className="mt-6 p-6 text-center text-gray-500">
+              Tidak ada user ditemukan.
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* TAB 3: CREATE WRITER */}
+        <TabsContent value="create_writer">
+          <div className="mt-6">
+            <CreateWriterForm />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

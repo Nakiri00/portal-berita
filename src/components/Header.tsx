@@ -59,7 +59,7 @@ export function Header({
 
   const handleTagClick = (tag: string) => {
     try {
-      navigate(`/?tag=${encodeURIComponent(tag)}`);
+      navigate(`articles/${encodeURIComponent(tag)}`);
     } catch (error) {
       window.location.href = `/?tag=${encodeURIComponent(tag)}`;
     }

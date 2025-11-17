@@ -8,11 +8,9 @@ export function ArticlePage() {
   const { isLoggedIn, addToReadingHistory, saveArticle, isArticleSaved, unsaveArticle } = useAuth();
 
   const handleBackClick = () => {
-    // Always go to home page to avoid navigation issues
     try {
-      navigate('/');
+      navigate(-1);
     } catch (error) {
-      // Emergency fallback - guaranteed to work
       window.location.href = '/';
     }
   };

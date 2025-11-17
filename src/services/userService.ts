@@ -45,8 +45,8 @@ export const updateProfile = async (formData: FormData) => {
 
   const response = await fetch(`${API_BASE_URL}/auth/profile`, {
     method: 'PUT',
-    headers: getAuthHeaders(), // Headers tanpa Content-Type: application/json
-    body: formData // Langsung kirim FormData
+    headers: getAuthHeaders(), 
+    body: formData 
   });
 
   if (!response.ok) {
@@ -55,4 +55,34 @@ export const updateProfile = async (formData: FormData) => {
   }
 
   return response.json();
+};
+
+export const adminCreateWriter = async (userData: { name: string; email: string; password: string }) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/writer`, { 
+      method: 'POST',
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Gagal membuat akun writer');
+    }
+
+    return {
+      success: true,
+      message: data.message || 'Akun writer berhasil dibuat',
+      user: data.user
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || 'Terjadi kesalahan'
+    };
+  }
 };

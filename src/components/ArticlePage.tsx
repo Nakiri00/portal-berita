@@ -5,8 +5,11 @@ import { Badge } from './ui/badge';
 import { CommentSection } from './CommentSection';
 import { toast } from 'sonner';
 import { useArticles, Article as LocalArticle, mapApiToLocalArticle } from '../contexts/ArticleContext';
-import { getWriterProfile } from '../services/userService'; // Import service untuk ambil Bio
-import { getArticleById,  viewArticle , toggleArticleLike, Article as ApiArticleType } from '../services/articleService'; // Import service
+import { getWriterProfile } from '../services/userService'; 
+import { getArticleById,  viewArticle , toggleArticleLike, Article as ApiArticleType } from '../services/articleService'; 
+import { useBreadcrumb } from '../contexts/BreadcrumbContext';
+import { useParams } from 'react-router-dom';
+import { Article } from '../services/articleService';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 // Definisikan tipe untuk data penulis yang diperlukan
@@ -44,8 +47,51 @@ export function ArticlePage({
     const [likeCount, setLikeCount] = useState(0); // Inisialisasi dengan 0 atau nilai awal yang sesuai
     const [authorBioData, setAuthorBioData] = useState<ArticleAuthor | null>(null);
     const {fetchArticles} = useArticles(); // Fungsi untuk refresh articles
+    const { setDynamicCrumbs, clearDynamicCrumbs } = useBreadcrumb();
+    const [loading, setLoading] = useState(true);
+    const { id } = useParams<{ id: string }>();
+    const [article, setArticle] = useState<Article | null>(null);
     // Cari artikel dari published articles
 //     let article = publishedArticles.find(a => a.id === articleId);
+  useEffect(() => {
+    const fetchArticle = async () => {
+      if (!id) return;
+      
+      setLoading(true);
+      setArticle(null); 
+      try {
+        const response = await getArticleById(id);
+        if (response.success) {
+          setArticle(response.data.article); 
+        }
+      } catch (error) {
+        console.error("Failed to fetch article:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchArticle();
+    
+  }, [id]); 
+
+  useEffect(() => {
+    if (article) {
+      setDynamicCrumbs([
+        { 
+          label: article.category, 
+          path: `/?tag=${encodeURIComponent(article.category)}` 
+        },
+        { label: article.title }
+      ]);
+    }
+
+    return () => {
+      clearDynamicCrumbs();
+    };
+  }, [article, setDynamicCrumbs, clearDynamicCrumbs]); 
+    
+    // Fungsi untuk toggle like artikel
     const handleLike = useCallback(async () => {
         // if (!articleData) return;
         if (!isLoggedIn) {

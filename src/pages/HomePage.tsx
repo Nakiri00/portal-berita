@@ -22,13 +22,12 @@ export function HomePage() {
   };
 
   const handleTagClick = (tag: string) => {
-    // Kirim tag mentah ke URL (untuk tampilan yang lebih baik)
-    if (tag) {
-      navigate(`/?tag=${encodeURIComponent(tag)}`);
-    } else {
-      navigate('/');
-    }
-  };
+    if (tag) {
+      navigate(`/articles/${encodeURIComponent(tag)}`);
+    } else {
+      navigate('/');
+    }
+  };
 
   return (
     <HomePageComponent 

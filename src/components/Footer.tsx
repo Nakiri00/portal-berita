@@ -15,13 +15,13 @@ export function Footer() {
 
   const links = [
     { label: 'Tentang Kamus Mahasiswa', path: '/tentang' },
-    { label: 'Berita Terkini', path: '/berita-terkini' },
+    { label: 'Berita Terkini', path: '/' },
     { label: 'Hubungi Kami', path: '/hubungi-kami' }
   ];
 
   const handleTagClick = (tag: string) => {
     try {
-      navigate(`/?tag=${encodeURIComponent(tag)}`);
+      navigate(`articles/${encodeURIComponent(tag)}`);
     } catch (error) {
       window.location.href = `/?tag=${encodeURIComponent(tag)}`;
     }

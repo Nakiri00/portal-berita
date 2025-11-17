@@ -6,8 +6,6 @@ import { ArticlePage } from './pages/ArticlePage';
 import { MyAccountPage } from './pages/MyAccountPage';
 import { WriterPage } from './pages/WriterPage';
 import { AuthorProfilePage } from './pages/AuthorProfilePage';
-import { BeritaTerkiniPage } from './pages/BeritaTerkiniPage';
-import { TipsTrikPage } from './pages/TipsTrikPage';
 import { TentangPage } from './pages/TentangPage';
 import { HubungiKamiPage } from './pages/HubungiKamiPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
@@ -20,7 +18,8 @@ import { Breadcrumb } from './components/Breadcrumb';
 import { Toaster } from './components/ui/sonner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ArticleProvider } from './contexts/ArticleContext';
-
+import { ArticleList } from './pages/ArticleList';
+import { BreadcrumbProvider } from './contexts/BreadcrumbContext';
 function AppContent() {
   const { 
     isLoggedIn, 
@@ -101,13 +100,13 @@ function AppContent() {
             } 
           />
           <Route path="/author/:id" element={<AuthorProfilePage />} />
-          <Route path="/berita-terkini" element={<BeritaTerkiniPage />} />
-          <Route path="/tips-trik" element={<TipsTrikPage />} />
           <Route path="/tentang" element={<TentangPage />} />
           <Route path="/hubungi-kami" element={<HubungiKamiPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/articles" element={<ArticleList />} />
+          <Route path="/articles/:kategori" element={<ArticleList />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
@@ -130,7 +129,9 @@ export default function App() {
     <Router>
       <AuthProvider>
         <ArticleProvider>
-          <AppContent />
+          <BreadcrumbProvider>
+            <AppContent />
+          </BreadcrumbProvider>
         </ArticleProvider>
       </AuthProvider>
     </Router>

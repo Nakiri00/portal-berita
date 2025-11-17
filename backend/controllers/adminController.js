@@ -1,4 +1,6 @@
 const User = require('../models/User');
+const ErrorHandler = require('../utils/errorHandler');
+const catchAsyncErrors = require('../middleware/catchAsyncErrors');
 
 // Get all users (admin only)
 const getAllUsers = async (req, res) => {
@@ -261,11 +263,44 @@ const getUserStats = async (req, res) => {
   }
 };
 
+const createWriter = catchAsyncErrors(async (req, res, next) => {
+  const { name, email, password } = req.body;
+
+  if (!name || !email || !password) {
+    return next(new ErrorHandler('Harap isi nama, email, dan password', 400));
+  }
+  
+  // Validasi password (minimal 8 karakter)
+  if (password.length < 8) {
+    return next(new ErrorHandler('Password minimal harus 8 karakter', 400));
+  }
+
+  // Cek jika email sudah terdaftar
+  const userExists = await User.findOne({ email });
+  if (userExists) {
+    return next(new ErrorHandler('Email sudah terdaftar', 400));
+  }
+
+  const user = await User.create({
+    name,
+    email,
+    password, 
+    role: 'writer'
+  });
+
+  res.status(201).json({
+    success: true,
+    user,
+    message: 'Akun writer berhasil dibuat'
+  });
+});
+
 module.exports = {
   getAllUsers,
   getUserById,
   updateUserRole,
   deactivateUser,
   activateUser,
-  getUserStats
+  getUserStats,
+  createWriter
 };
