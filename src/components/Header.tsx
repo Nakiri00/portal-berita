@@ -109,7 +109,7 @@ export function Header({
           </div>
 
           {/* Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          {/* <nav className="hidden md:flex items-center space-x-8">
             <button 
               onClick={() => handleNavigation('/berita-terkini')}
               className={`text-gray-700 hover:text-blue-600 transition-colors bg-transparent border-none cursor-pointer ${
@@ -134,7 +134,7 @@ export function Header({
             >
               Tentang
             </button>
-          </nav>
+          </nav> */}
 
           {/* Mobile Navigation */}
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -179,7 +179,7 @@ export function Header({
                 )}
 
                 {/* Navigation Links */}
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <button 
                     onClick={() => {
                       handleNavigation('/berita-terkini');
@@ -213,7 +213,7 @@ export function Header({
                   >
                     Tentang
                   </button>
-                </div>
+                </div> */}
                 
                 <div className="border-t pt-4">
                   {isLoggedIn ? (
