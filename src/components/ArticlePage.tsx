@@ -31,6 +31,11 @@ interface ArticlePageProps {
   onLogout?: () => void; 
 }
 
+const capitalizeWords = (str: string) => {
+  if (!str) return '';
+  return str.replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
 export function ArticlePage({ 
   articleId, 
   onBackClick, 
@@ -78,11 +83,15 @@ export function ArticlePage({
   useEffect(() => {
     if (article) {
       setDynamicCrumbs([
+        // 1. halaman utama Artikel
+        { label: 'Artikel', path: '/articles' }, 
+        // 2. Link ke kategori/tag artikel tersebut
         { 
-          label: article.category, 
-          path: `/?tag=${encodeURIComponent(article.category)}` 
+          label: capitalizeWords(article.category), 
+          path: `/articles/${article.category}` 
         },
-        { label: article.title }
+        // 3. Artikel saat ini sebagai teks (tidak bisa diklik)
+        { label: article.title, path: '' }
       ]);
     }
 
@@ -352,7 +361,9 @@ export function ArticlePage({
               fontSize: 'clamp(14px, 2.5vw, 16px)', 
               lineHeight: '1.6',
             }}
-            dangerouslySetInnerHTML={{ __html: currentArticle.content }}
+            dangerouslySetInnerHTML={{ 
+              __html: currentArticle.content.replace(/\n/g, '<br />') 
+            }}
           />
 
           {/* Author Bio - Better responsive layout */}

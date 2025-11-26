@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { getAllArticles, Article } from '../services/articleService';
 import { NewsCard } from '../components/NewsCard'; 
 import { LoadingSpinner } from '../components/LoadingSpinner'; 
+// [1] Import Context Breadcrumb
+import { useBreadcrumb } from '../contexts/BreadcrumbContext';
 import {
   Pagination,
   PaginationContent,
@@ -21,6 +23,11 @@ const formatTanggal = (tanggal: string | null) => {
   });
 };
 
+const capitalizeWords = (str: string) => {
+  if (!str) return '';
+  return str.replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
 export function ArticleList() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -28,8 +35,31 @@ export function ArticleList() {
   const [isLoading, setIsLoading] = useState(true);
   const [pagination, setPagination] = useState(1);
   const currentPage = parseInt(searchParams.get('page') || '1');
+  
+  // Ambil kategori dari URL (misal: /articles/Akademik)
   const { kategori } = useParams<{ kategori: string }>();
   const selectedTag = kategori || '';
+
+  // [2] Gunakan hook Breadcrumb
+  const { setDynamicCrumbs } = useBreadcrumb();
+
+  // [3] Effect Khusus untuk Update Breadcrumb
+  useEffect(() => {
+    if (selectedTag) {
+      // Jika ada kategori (misal: Akademik)
+      // Breadcrumb: Beranda > Artikel (Link) > Akademik (Teks)
+      setDynamicCrumbs([
+        { label: 'Artikel', path: '/articles' },
+        { label: capitalizeWords(selectedTag), path: '' } // path kosong = tidak bisa diklik (aktif)
+      ]);
+    } else {
+      // Jika tidak ada kategori (Halaman Index Artikel)
+      // Breadcrumb: Beranda > Artikel (Teks)
+      setDynamicCrumbs([
+        { label: 'Artikel', path: '' }
+      ]);
+    }
+  }, [selectedTag, setDynamicCrumbs]);
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -73,7 +103,7 @@ export function ArticleList() {
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">
-        {selectedTag ? ` Artikel ${selectedTag}` : 'Semua Artikel'}
+        {selectedTag ? `Artikel ${selectedTag}` : 'Semua Artikel'}
       </h1>
       
       {isLoading ? (
@@ -95,6 +125,7 @@ export function ArticleList() {
                   readCount={article.views}
                   isHeadline={article.isFeatured}
                   onClick={() => handleArticleClick(article._id)}
+                  forceStandard={true}
                 />
               ))}
             </div>

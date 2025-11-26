@@ -1,4 +1,4 @@
-import { Link, useLocation, useSearchParams, useParams } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Breadcrumb as ShadcnBreadcrumb,
   BreadcrumbItem,
@@ -12,97 +12,44 @@ import { useEffect } from 'react';
 
 export function Breadcrumb() {
   const location = useLocation();
-  const params = useParams();
   const { dynamicCrumbs, clearDynamicCrumbs } = useBreadcrumb();
 
+  // Bersihkan breadcrumb jika kita keluar dari halaman-halaman artikel
   useEffect(() => {
-    if (!location.pathname.startsWith('/articles/')) {
+    // Jika URL BUKAN berawalan /article (baik list maupun detail)
+    if (!location.pathname.startsWith('/article')) {
       clearDynamicCrumbs();
     }
-  }, [location, clearDynamicCrumbs]);
+  }, [location.pathname, clearDynamicCrumbs]);
 
-  if (location.pathname.startsWith('/articles/')) {
+  // Jika ada dynamic crumbs (dari ArticleList atau ArticlePage), tampilkan
+  if (dynamicCrumbs.length > 0) {
     return (
       <div className="bg-gray-100">
         <div className="container mx-auto max-w-7xl px-4 py-3">
           <ShadcnBreadcrumb>
             <BreadcrumbList>
+              {/* Selalu mulai dengan Beranda */}
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
                   <Link to="/">Beranda</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link to="/articles">Artikel</Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
 
-              {dynamicCrumbs.length > 0 ? (
-                dynamicCrumbs.map((crumb, index) => (
-                  <BreadcrumbItem key={index}>
-                    <BreadcrumbSeparator />
-                    {index === dynamicCrumbs.length - 1 ? (
-                      <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-                    ) : (
-                      <BreadcrumbLink asChild>
-                        {crumb.path ? (
-                          <Link to={crumb.path}>{crumb.label}</Link>
-                        ) : (
-                          <span>{crumb.label}</span> 
-                        )}
-                      </BreadcrumbLink>
-                    )}
-                  </BreadcrumbItem>
-                ))
-              ) : (
-                <>
+              {/* Render sisa breadcrumb dari context */}
+              {dynamicCrumbs.map((crumb, index) => (
+                <BreadcrumbItem key={index}>
                   <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>Memuat...</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </>
-              )}
-            </BreadcrumbList>
-          </ShadcnBreadcrumb>
-        </div>
-      </div>
-    );
-  }
-
-  if (location.pathname.startsWith('/articles')) {
-    // 3. Ambil 'kategori' dari 'params'
-    const { kategori } = params as { kategori?: string }; 
-
-    return (
-      <div className="bg-gray-100">
-        <div className="container mx-auto max-w-7xl px-4 py-3">
-          <ShadcnBreadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild><Link to="/">Beranda</Link></BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-
-              {kategori ? (
-                // Jika path-nya /artikel/tips-trik
-                <>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink asChild><Link to="/articles">Artikel</Link></BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>{kategori}</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </>
-              ) : (
-                // Jika path-nya /artikel
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Artikel</BreadcrumbPage>
+                  {/* Jika ini item terakhir ATAU path-nya kosong, render sebagai Teks (Page) */}
+                  {index === dynamicCrumbs.length - 1 || !crumb.path ? (
+                    <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                  ) : (
+                    <BreadcrumbLink asChild>
+                      <Link to={crumb.path}>{crumb.label}</Link>
+                    </BreadcrumbLink>
+                  )}
                 </BreadcrumbItem>
-              )}
-              
+              ))}
             </BreadcrumbList>
           </ShadcnBreadcrumb>
         </div>
@@ -110,16 +57,5 @@ export function Breadcrumb() {
     );
   }
 
-  // Jangan tampilkan breadcrumb di halaman utama
-  const pathnames = location.pathname.split('/').filter((x) => x);
-  if (pathnames.length === 0) {
-    return null;
-  }
-
-  // Fallback untuk halaman lain 
-  // return (
-  //   <div className="bg-gray-100">
-       
-  //   </div>
-  // );
+  return null;
 }

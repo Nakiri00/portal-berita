@@ -107,6 +107,7 @@ function AppContent() {
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/articles" element={<ArticleList />} />
           <Route path="/articles/:kategori" element={<ArticleList />} />
+          <Route path="/articles/:kategory/:id" element={<ArticlePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

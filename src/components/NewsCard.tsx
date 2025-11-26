@@ -13,6 +13,7 @@ interface NewsCardProps {
   readCount: number;
   isHeadline?: boolean;
   isNew?: boolean;
+  forceStandard?: boolean;
   onClick: () => void;
 }
 
@@ -26,27 +27,31 @@ export function NewsCard({
   readCount,
   isHeadline = false,
   isNew = false,
+  forceStandard = false, 
   onClick 
 }: NewsCardProps) {
+  
+  const showHeadlineLayout = isHeadline && !forceStandard;
+
   return (
     <article 
       className={`bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden ${
-        isHeadline ? 'lg:col-span-3' : ''
+        showHeadlineLayout ? 'lg:col-span-3' : '' 
       }`}
       onClick={onClick}
     >
-      <div className={`${isHeadline ? 'lg:flex lg:h-80' : ''}`}>
-        <div className={`${isHeadline ? 'lg:w-1/2' : ''}`}>
+      <div className={`${showHeadlineLayout ? 'lg:flex lg:h-80' : ''}`}>
+        <div className={`${showHeadlineLayout ? 'lg:w-1/2' : ''}`}>
           <img 
             src={`${API_BASE_URL}${imageUrl}`} 
             alt={title}
             className={`w-full object-cover ${
-              isHeadline ? 'h-48 sm:h-56 lg:h-full' : 'h-36 sm:h-48'
+              showHeadlineLayout ? 'h-48 sm:h-56 lg:h-full' : 'h-36 sm:h-48'
             }`}
           />
         </div>
         
-        <div className={`p-4 sm:p-6 ${isHeadline ? 'lg:w-1/2 lg:flex lg:flex-col lg:justify-between' : ''}`}>
+        <div className={`p-4 sm:p-6 ${showHeadlineLayout ? 'lg:w-1/2 lg:flex lg:flex-col lg:justify-between' : ''}`}>
           <div className="flex-1">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
@@ -70,13 +75,13 @@ export function NewsCard({
             </div>
             
             <h3 className={`mb-2 sm:mb-3 text-gray-900 hover:text-blue-600 font-semibold leading-tight line-clamp-2 ${
-              isHeadline ? 'text-lg sm:text-xl lg:text-2xl' : 'text-base sm:text-lg'
+              showHeadlineLayout ? 'text-lg sm:text-xl lg:text-2xl' : 'text-base sm:text-lg'
             }`}>
               {title}
             </h3>
             
             <p className={`text-gray-600 mb-3 sm:mb-4 line-clamp-3 leading-relaxed ${
-              isHeadline ? 'text-sm sm:text-base' : 'text-sm'
+              showHeadlineLayout ? 'text-sm sm:text-base' : 'text-sm'
             }`}>
               {excerpt}
             </p>
