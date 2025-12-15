@@ -7,6 +7,7 @@ import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 import { ForgotPasswordDialog } from './ForgotPasswordDialog';
+import { useNavigate } from 'react-router-dom';
 
 interface LoginDialogProps {
   isOpen: boolean;
@@ -25,7 +26,7 @@ export function LoginDialog({ isOpen, onClose, onLoginSuccess }: LoginDialogProp
   const [name, setName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-
+  const navigate = useNavigate();
   const resetForm = () => {
     setEmail('');
     setPassword('');
@@ -52,6 +53,9 @@ export function LoginDialog({ isOpen, onClose, onLoginSuccess }: LoginDialogProp
         onLoginSuccess();
         resetForm();
         onClose();
+        if (result.data.user.role === 'admin') {
+           navigate('/admin'); 
+        }
       } else {
         toast.error(result.message || 'Login gagal');
       }

@@ -41,7 +41,7 @@ interface AuthContextType {
   savedArticles: SavedArticle[];
   writerArticles: any[];
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; message?: string; data?: any }>;
   register: (name: string, email: string, password: string, role?: 'user' | 'writer') => Promise<{ success: boolean; message?: string }>;
   loginWithToken: (token: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
@@ -225,11 +225,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         setIsLoggedIn(true);
         
-        // LOGIKA ROLE DIPISAH
         setIsAdmin(role === 'admin');
         setIsWriter(role === 'writer' || role === 'admin');
         
-        return { success: true };
+        return { success: true, data: data.data };
       } else {
         return { success: false, message: data.message };
       }
