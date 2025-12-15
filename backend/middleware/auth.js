@@ -55,6 +55,26 @@ const requireWriter = (req, res, next) => {
   next();
 };
 
+const authorize = (...roles) => {
+  return (req, res, next) => {
+    // Pastikan req.user sudah ada (biasanya dipasang setelah authenticate)
+    if (!req.user) {
+        return res.status(401).json({ 
+            success: false, 
+            message: 'User belum terautentikasi' 
+        });
+    }
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: `Role (${req.user.role}) tidak memiliki izin akses resource ini`
+      });
+    }
+    next();
+  };
+};
+
 // Optional auth middleware (tidak wajib login)
 const optionalAuth = async (req, res, next) => {
   try {
@@ -82,5 +102,6 @@ module.exports = {
   authenticate,
   requireAdmin,
   requireWriter,
-  optionalAuth
+  optionalAuth,
+  authorize
 };

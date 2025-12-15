@@ -17,6 +17,13 @@ interface UserProfileResponse {
   user: WriterProfile;
 }
 
+export interface CreateUserData {
+  name: string;
+  email: string;
+  password: string;
+  role: 'intern' | 'writer' | 'editor' | 'admin'; // Tambahkan tipe role
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const getAuthHeaders = () => {
@@ -57,32 +64,22 @@ export const updateProfile = async (formData: FormData) => {
   return response.json();
 };
 
-export const adminCreateWriter = async (userData: { name: string; email: string; password: string }) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/admin/writer`, { 
-      method: 'POST',
-      headers: {
-        ...getAuthHeaders(),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(userData),
-    });
+export const adminCreateUser = async (userData: CreateUserData) => {
+  const token = localStorage.getItem('portal_token');
+  const response = await fetch(`${API_BASE_URL}/admin/create-user`, { 
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(userData),
+  });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Gagal membuat akun writer');
-    }
-
-    return {
-      success: true,
-      message: data.message || 'Akun writer berhasil dibuat',
-      user: data.user
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      message: error.message || 'Terjadi kesalahan'
-    };
+  const data = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(data.message || 'Gagal membuat user');
   }
+
+  return data;
 };

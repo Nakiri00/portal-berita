@@ -289,6 +289,7 @@ export function HomePage({
               {regularArticles.slice(0, visibleArticles).map((article) => (
                 <NewsCard
                   key={article.id} 
+                  forceStandard = {true}
                   {...article}
                   onClick={() => onArticleClick(article.id)}
                 />
@@ -341,6 +342,7 @@ export function HomePage({
                       {tagArticles.map((article) => (
                         <NewsCard
                           key={article.id}
+                          forceStandard = {true}
                           {...article}
                           onClick={() => onArticleClick(article.id)}
                         />

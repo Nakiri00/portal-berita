@@ -1,22 +1,29 @@
-// File: src/components/CreateWriterForm.tsx
-
 import { useState } from 'react';
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { adminCreateWriter } from '../services/userService'; // Impor fungsi service
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "./ui/select";
+import { adminCreateUser } from '../services/userService'; 
 import { toast } from 'sonner';
 
-export function CreateWriterForm() {
+export function CreateWriterForm() { 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // State default 'intern' atau 'writer'
+  const [role, setRole] = useState<'intern' | 'writer' | 'editor' | 'admin'>('writer');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !role) {
       toast.error('Semua field harus diisi');
       return;
     }
@@ -28,13 +35,15 @@ export function CreateWriterForm() {
 
     setIsLoading(true);
     try {
-      const result = await adminCreateWriter({ name, email, password });
+      // Mengirim role yang dipilih ke service
+      const result = await adminCreateUser({ name, email, password, role });
 
       if (result.success) {
-        toast.success(result.message);
+        toast.success(`Akun ${role} berhasil dibuat!`);
         setName('');
         setEmail('');
         setPassword('');
+        setRole('writer'); // Reset ke default
       } else {
         toast.error(result.message);
       }
@@ -48,34 +57,58 @@ export function CreateWriterForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Buat Akun Penulis Baru</CardTitle>
+        <CardTitle>Buat Akun Tim Baru</CardTitle>
         <CardDescription>
-          Buat akun baru yang akan memiliki role 'writer'.
+          Buat akun untuk Intern, Writer, Editor, atau Admin tambahan.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nama Lengkap</Label>
-            <Input
-              id="name"
-              placeholder="John Doe"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={isLoading}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nama Lengkap</Label>
+              <Input
+                id="name"
+                placeholder="John Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={isLoading}
+              />
+            </div>
+            
+            {/* Input Role Selection */}
+            <div className="space-y-2">
+              <Label>Role / Jabatan</Label>
+              <Select 
+                value={role} 
+                onValueChange={(value: any) => setRole(value)} 
+                disabled={isLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="intern">Intern (Magang)</SelectItem>
+                  <SelectItem value="writer">Writer (Penulis Tetap)</SelectItem>
+                  <SelectItem value="editor">Editor (Redaktur)</SelectItem>
+                  <SelectItem value="admin">Admin (Administrator)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
-              placeholder="penulis@example.com"
+              placeholder="user@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading}
             />
           </div>
+          
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <Input
@@ -87,8 +120,9 @@ export function CreateWriterForm() {
               disabled={isLoading}
             />
           </div>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Membuat...' : 'Buat Akun Penulis'}
+
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'Memproses...' : `Buat Akun ${role.charAt(0).toUpperCase() + role.slice(1)}`}
           </Button>
         </form>
       </CardContent>

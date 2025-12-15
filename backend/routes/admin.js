@@ -21,7 +21,7 @@ router.get('/users/:userId', getUserById);
 router.put('/users/:userId/role', updateUserRole);
 router.put('/users/:userId/deactivate', deactivateUser);
 router.put('/users/:userId/activate', activateUser);
-router.post('/writer', createWriter);
+router.post('/create-user', createWriter);
 
 
 // Statistics

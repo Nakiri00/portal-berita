@@ -38,11 +38,11 @@ const articleSchema = new mongoose.Schema({
       'pendidikan', 
       'olahraga', 
       'hiburan', 
-      'lainnya',
       'akademik',
       'kehidupan kampus',
       'beasiswa',
-      'karir'
+      'karir',
+      'Infografis'
     ],
     default: 'berita'
   },
@@ -57,7 +57,7 @@ const articleSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['draft', 'published', 'archived'],
+    enum: ['draft', 'published', 'archived', 'pending review', 'rejected'],
     default: 'draft'
   },
   publishedAt: {

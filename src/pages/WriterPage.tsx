@@ -27,7 +27,7 @@ interface ArticleForm extends CreateArticleData {
 }
 
 // Daftar tags yang tersedia
-const AVAILABLE_TAGS = ['Akademik', 'Kehidupan Kampus', 'Tips & Trik', 'Beasiswa', 'Karir', 'Lainnya'];
+const AVAILABLE_TAGS = ['Akademik', 'Kehidupan Kampus', 'Tips & Trik', 'Beasiswa', 'Karir', 'Infografis'];
 const toTitleCase = (str: string): string => {
     if (!str) return '';
     return str.replace(

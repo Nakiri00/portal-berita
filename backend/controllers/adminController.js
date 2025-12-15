@@ -264,18 +264,21 @@ const getUserStats = async (req, res) => {
 };
 
 const createWriter = catchAsyncErrors(async (req, res, next) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, role } = req.body;
 
   if (!name || !email || !password) {
     return next(new ErrorHandler('Harap isi nama, email, dan password', 400));
   }
   
-  // Validasi password (minimal 8 karakter)
+  // Validasi password
   if (password.length < 8) {
     return next(new ErrorHandler('Password minimal harus 8 karakter', 400));
   }
 
-  // Cek jika email sudah terdaftar
+  // Validasi Role yang diizinkan
+  const validRoles = ['intern', 'writer', 'editor', 'admin'];
+  const userRole = validRoles.includes(role) ? role : 'writer';
+
   const userExists = await User.findOne({ email });
   if (userExists) {
     return next(new ErrorHandler('Email sudah terdaftar', 400));
@@ -285,13 +288,13 @@ const createWriter = catchAsyncErrors(async (req, res, next) => {
     name,
     email,
     password, 
-    role: 'writer'
+    role: userRole
   });
 
   res.status(201).json({
     success: true,
     user,
-    message: 'Akun writer berhasil dibuat'
+    message: `Akun ${userRole} berhasil dibuat`
   });
 });
 

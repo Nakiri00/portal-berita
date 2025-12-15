@@ -103,8 +103,12 @@ export function AdminPage() {
     switch (role) {
       case 'admin':
         return 'bg-red-100 text-red-800';
+      case 'editor': 
+        return 'bg-purple-100 text-purple-800';
       case 'writer':
         return 'bg-blue-100 text-blue-800';
+      case 'intern': 
+        return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -231,8 +235,8 @@ export function AdminPage() {
               <CardContent className="p-6 flex items-center">
                 <Plus className="h-8 w-8 text-blue-600" />
                 <div className="ml-4">
-                  <p className="text-sm text-gray-600">Tambah Penulis Baru</p>
-                  <p className="text-lg font-semibold text-blue-800">Buat Penulis</p>
+                  <p className="text-sm text-gray-600">Tambah Tim Baru</p>
+                  <p className="text-lg font-semibold text-blue-800">Buat Akun</p>
                 </div>
               </CardContent>
             </Card>
