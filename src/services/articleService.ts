@@ -222,7 +222,7 @@ export const getWriterArticles = async (params?: {
 // Create new article
 export const createArticle = async (articleData: FormData) => {
   const token = localStorage.getItem('portal_token');
-  const response = await fetch(`${API_BASE_URL}/articles/writer/create`, {
+  const response = await fetch(`${API_BASE_URL}/articles/create`, {
     method: 'POST',
     headers: { Authorization: token ? `Bearer ${token}` : '' },
     body: articleData
@@ -266,7 +266,7 @@ export const updateArticle = async (articleId: string, articleData: UpdateArticl
         formData.append('isFeatured', articleData.isFeatured.toString());
     }
     
-    const response = await fetch(`${API_BASE_URL}/articles/writer/${articleId}`, {
+    const response = await fetch(`${API_BASE_URL}/articles/${articleId}`, {
         method: 'PUT',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -284,7 +284,7 @@ export const updateArticle = async (articleId: string, articleData: UpdateArticl
 
 // Delete article
 export const deleteArticle = async (id: string): Promise<{ success: boolean; message: string }> => {
-  const response = await fetch(`${API_BASE_URL}/articles/writer/${id}`, {
+  const response = await fetch(`${API_BASE_URL}/articles/${id}`, {
     method: 'DELETE',
     headers: getAuthHeaders()
   });
