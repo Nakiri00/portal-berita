@@ -10,7 +10,7 @@ import { getArticleById,  viewArticle , toggleArticleLike, Article as ApiArticle
 import { useBreadcrumb } from '../contexts/BreadcrumbContext';
 import { useParams } from 'react-router-dom';
 import { Article } from '../services/articleService';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // Definisikan tipe untuk data penulis yang diperlukan
 interface ArticleAuthor {
