@@ -1,6 +1,6 @@
 import { Badge } from './ui/badge';
 import { Calendar, User, Eye } from 'lucide-react';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000' ;
 
 interface NewsCardProps {
   id: string;
@@ -100,7 +100,7 @@ export function NewsCard({
             </div>
             <div className="flex items-center space-x-1">
               <Eye className="h-3 w-3" />
-              <span>{readCount.toLocaleString()}</span>
+              <span>{(readCount || 0).toLocaleString()}</span>
             </div>
           </div>
         </div>
