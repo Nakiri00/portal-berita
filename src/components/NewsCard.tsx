@@ -100,7 +100,7 @@ export function NewsCard({
             </div>
             <div className="flex items-center space-x-1">
               <Eye className="h-3 w-3" />
-              <span>{readCount.toLocaleString()}</span>
+              <span>{(readCount || 0).toLocaleString()}</span>
             </div>
           </div>
         </div>

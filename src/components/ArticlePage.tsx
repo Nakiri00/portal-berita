@@ -371,7 +371,7 @@ export function ArticlePage({
             <div className="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-4">
               <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <span className="text-blue-600 font-medium text-sm sm:text-lg">
-                  {currentArticle.author.split(' ').map(n => n[0]).join('')}
+                  {(currentArticle.author || 'Penulis').split(' ').map(n => n[0]).join('')}
                 </span>
               </div>
               <div className="flex-1 w-full">
