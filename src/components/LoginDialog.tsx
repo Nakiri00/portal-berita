@@ -293,7 +293,7 @@ export function LoginDialog({ isOpen, onClose, onLoginSuccess }: LoginDialogProp
           )}
 
           {/* Social Login - Only for login mode */}
-          {!isRegisterMode && (
+          {/* {!isRegisterMode && (
             <div className="space-y-2">
             <Button
               type="button"
@@ -341,10 +341,10 @@ export function LoginDialog({ isOpen, onClose, onLoginSuccess }: LoginDialogProp
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-white px-2 text-muted-foreground">khusus penulis</span>
               </div>
-            </div>
+            </div> */}
 
             {/* Writer Login */}
-            <Button
+            {/* <Button
               type="button"
               variant="outline"
               className="w-full h-10 border-blue-200 text-blue-600 hover:bg-blue-50 text-sm"
@@ -371,7 +371,7 @@ export function LoginDialog({ isOpen, onClose, onLoginSuccess }: LoginDialogProp
               <span className="truncate">Masuk sebagai Penulis dengan Google</span>
             </Button>
             </div>
-          )}
+          )} */}
         </form>
       </DialogContent>
       

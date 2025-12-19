@@ -35,7 +35,7 @@ router.get('/writer/my-articles', authorize('intern', 'writer', 'editor'), getWr
 // 3. Article Management (Create/Update/Delete)
 
 // CREATE: Admin DIHAPUS. Intern, Writer, Editor BOLEH.
-router.post('/', 
+router.post('/create', 
     authorize('intern', 'writer', 'editor'), 
     uploadArticle, 
     createArticle
