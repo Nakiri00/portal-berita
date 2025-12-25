@@ -1,5 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { assetUrl } from '../utils/assets';
 import { useNavigate } from 'react-router-dom';
 import { 
   DropdownMenu, 
@@ -67,12 +67,13 @@ export function UserProfileDropdown({
   } = useAuth(); 
 
   if (!userProfile) return null; 
+  const navigate = useNavigate();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
   const [isSavedDialogOpen, setIsSavedDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState(userProfile); 
-  const navigate = useNavigate();
+  
 
   const handleLogout = () => {
     onLogout(); 
@@ -115,7 +116,7 @@ export function UserProfileDropdown({
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
               {userProfile.avatar ? (
-                <AvatarImage src={userProfile.avatar} alt={userProfile.name} />
+                <AvatarImage src={assetUrl(userProfile.avatar)} alt={userProfile.name} />
               ) : (
                 <AvatarFallback>
                   {userProfile.name.split(' ').map(n => n[0]).join('')}
@@ -130,7 +131,7 @@ export function UserProfileDropdown({
             <div className="flex items-center space-x-3 p-2">
               <Avatar className="h-12 w-12">
                 {userProfile.avatar ? (
-                  <AvatarImage src={userProfile.avatar} alt={userProfile.name} />
+                  <AvatarImage src={assetUrl(userProfile.avatar)} />
                 ) : (
                   <AvatarFallback className="text-lg">
                     {userProfile.name.split(' ').map(n => n[0]).join('')}
@@ -192,10 +193,10 @@ export function UserProfileDropdown({
 
           <DropdownMenuGroup>
             {/* Edit Profile */}
-            <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+            {/* <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
               <Edit className="mr-2 h-4 w-4" />
               <span>Edit Profil</span>
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
 
             {/* Dialog Triggers - SEMBUNYIKAN UNTUK ADMIN */}
             {!isAdmin && (
@@ -407,7 +408,7 @@ export function UserProfileDropdown({
                 {savedArticles.map((article) => (
                   <div key={article.articleId} className="flex space-x-3 p-3 bg-gray-50 rounded-lg">
                     <img 
-                      src={API_BASE_URL + article.imageUrl} 
+                      src={assetUrl(article.imageUrl)} 
                       alt={article.title}
                       className="w-20 h-16 object-cover rounded"
                     />

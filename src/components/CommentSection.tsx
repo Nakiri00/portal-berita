@@ -7,7 +7,8 @@ import { Heart, MessageCircle, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 // 💡 IMPORT SERVICE BARU
-import { getComments, postComment, postReply, toggleCommentLike, Comment, Reply, CommentLikeResponse } from '../services/commentService'; 
+import { getComments, postComment, postReply, toggleCommentLike, Comment, Reply, CommentLikeResponse } from '../services/commentService';
+import { assetUrl } from '../utils/assets';
 
 function isMainComment(data: Comment | Reply): data is Comment {
     return (data as Comment).replies !== undefined;
@@ -114,9 +115,16 @@ const CommentItem: React.FC<CommentItemProps> = ({
         // 💡 KOREKSI LAYOUT: Gunakan className conditional untuk membedakan komentar dan balasan
         <div className={`space-y-3 ${isReply ? 'mt-3 pt-3 border-gray-100' : 'mb-6'}`}>
             <div className="flex space-x-3">
-                <Avatar className="h-8 w-8 flex-shrink-0">
+                <Avatar className="h-8 w-8">
                     <AvatarFallback>
-                        {data.userName ? data.userName.split(' ').map(n => n[0]).join('') : 'U'}
+                        {data.userAvatar ? (
+                            <img 
+                                src={assetUrl(data.userAvatar)}
+                                alt={data.userName}
+                            />
+                        ) : (
+                            data.userName.split(' ').map(n => n[0]).join('')
+                        )}
                     </AvatarFallback>
                 </Avatar>
                 

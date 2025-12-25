@@ -8,7 +8,7 @@ interface MyAccountPageProps {
     email: string;
     avatar: string;
   };
-  onUpdateProfile: (profile: any) => void;
+  onUpdateProfile: (profile: any) => Promise<{ success: boolean; message?: string }>;
   isWriter: boolean;
 }
 

@@ -10,7 +10,7 @@ import { getArticleById,  viewArticle , toggleArticleLike, Article as ApiArticle
 import { useBreadcrumb } from '../contexts/BreadcrumbContext';
 import { useParams } from 'react-router-dom';
 import { Article } from '../services/articleService';
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { assetUrl } from '../utils/assets';
 
 // Definisikan tipe untuk data penulis yang diperlukan
 interface ArticleAuthor {
@@ -281,7 +281,7 @@ export function ArticlePage({
         {/* Featured Image */}
         <div className="w-full h-48 sm:h-64 md:h-80 overflow-hidden rounded-t-lg">
           <img 
-            src={API_BASE_URL + currentArticle.imageUrl} 
+            src={assetUrl(currentArticle.imageUrl)}
             alt={currentArticle.title}
             className="w-full h-full object-cover"
           />

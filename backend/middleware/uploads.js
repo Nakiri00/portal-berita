@@ -25,7 +25,7 @@ const articleStorage = multer.diskStorage({
 // --- 3. Konfigurasi untuk Profile Pictures ---
 const profilePictureStorage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const profilePath = path.join(UPLOAD_BASE_PATH, 'profile_pictures');
+        const profilePath = path.join(UPLOAD_BASE_PATH, 'avatars');
         ensureDirExists(profilePath);
         cb(null, profilePath); 
     },
@@ -38,8 +38,7 @@ const profilePictureStorage = multer.diskStorage({
 
 // --- 4. Buat Instance Multer ---
 const uploadArticle = multer({ storage: articleStorage }).single('imageFile');
-const uploadProfilePicture = multer({ storage: profilePictureStorage }).single('profilePicture'); 
-
+const uploadProfilePicture = multer({ storage: profilePictureStorage }).single('avatar');
 module.exports = { 
     uploadArticle,
     uploadProfilePicture 

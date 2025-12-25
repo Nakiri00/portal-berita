@@ -7,38 +7,64 @@ const ErrorHandler = require('../utils/errorHandler');
 exports.getArticleComments = catchAsyncErrors(async (req, res, next) => {
     const article = await Article.findById(req.params.articleId)
         .select('comments')
-        .lean(); 
+        .lean();
 
     if (!article) {
         return next(new ErrorHandler('Artikel tidak ditemukan', 404));
     }
 
-    let processedComments = article.comments;
+    // 🔥 Ambil semua userId dari komentar & balasan
+    const userIds = new Set();
 
-    if (req.user) {
-        const userId = req.user._id.toString();
-        processedComments = processedComments.map(comment => {
-            const isLiked = comment.likedBy.some(id => id.toString() === userId);
-            
-            // Proses balasan (replies)
-            const processedReplies = comment.replies.map(reply => ({
-                ...reply,
-                isLikedByMe: reply.likedBy.some(id => id.toString() === userId),
-            }));
+    article.comments.forEach(c => {
+        userIds.add(c.userId.toString());
+        c.replies.forEach(r => userIds.add(r.userId.toString()));
+    });
 
+    // 🔥 Fetch user sekali saja
+    const users = await User.find({ _id: { $in: [...userIds] } })
+        .select('name avatar')
+        .lean();
+
+    const userMap = {};
+    users.forEach(u => {
+        userMap[u._id.toString()] = u;
+    });
+
+    const userId = req.user?._id?.toString();
+
+    const processedComments = article.comments.map(comment => {
+        const user = userMap[comment.userId.toString()];
+
+        const processedReplies = comment.replies.map(reply => {
+            const replyUser = userMap[reply.userId.toString()];
             return {
-                ...comment,
-                isLikedByMe: isLiked,
-                replies: processedReplies
+                ...reply,
+                userName: replyUser?.name || reply.userName,
+                userAvatar: replyUser?.avatar || null,
+                isLikedByMe: userId
+                    ? reply.likedBy.some(id => id.toString() === userId)
+                    : false
             };
         });
-    }
+
+        return {
+            ...comment,
+            userName: user?.name || comment.userName,
+            userAvatar: user?.avatar || null,
+            isLikedByMe: userId
+                ? comment.likedBy.some(id => id.toString() === userId)
+                : false,
+            replies: processedReplies
+        };
+    });
 
     res.status(200).json({
         success: true,
         comments: processedComments
     });
 });
+
 
 // 2. Tambah Komentar Utama
 exports.addComment = catchAsyncErrors(async (req, res, next) => {

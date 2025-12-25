@@ -136,7 +136,7 @@ const getProfile = async (req, res) => {
 // Update user profile
 const updateProfile = async (req, res) => {
   try {
-    const { name, bio, avatar, socialLinks } = req.body;
+    const { name, bio, avatar, socialLinks, email } = req.body;
     const userId = req.user._id;
 
     const updateData = {};
@@ -146,6 +146,18 @@ const updateProfile = async (req, res) => {
         updateData.avatar = `/uploads/avatars/${req.file.filename}`; 
     } else if (avatar !== undefined) {
         updateData.avatar = avatar; 
+    }
+    if (email) {
+        if (email.toLowerCase() !== req.user.email.toLowerCase()) {
+            const existingUser = await User.findOne({ email });
+            if (existingUser) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Email sudah digunakan oleh pengguna lain'
+                });
+            }
+            updateData.email = email;
+        }
     }
   
     if (socialLinks) {

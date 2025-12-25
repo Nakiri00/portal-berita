@@ -40,7 +40,7 @@ export function HomePage({
   const { publishedArticles: contextArticles } = useArticles(); // Sumber utama data
 
   // Tags that will have their own sections
-  const availableTags = ['Akademik', 'Kehidupan Kampus', 'Tips & Trik', 'Beasiswa', 'Karir'];
+  const availableTags = ['Akademik', 'Kehidupan Kampus', 'Tips & Trik', 'Beasiswa', 'Karir', 'Infografis'];
   
   const allArticles = contextArticles.map(article => ({ 
     ...article, 

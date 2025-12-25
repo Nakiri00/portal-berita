@@ -4,6 +4,7 @@ import { getAllArticles, Article as ApiArticle } from '../services/articleServic
 interface FilterParams {
   tag?: string;
   search?: string;
+  limit?: number;
 }
 
 export interface Article {
@@ -59,13 +60,16 @@ export const mapApiToLocalArticle = (apiArticle: ApiArticle): Article => {
 
 export function ArticleProvider({ children }: { children: ReactNode }) {
   const [publishedArticles, setPublishedArticles] = useState<Article[]>([]);
-
+ 
   const fetchArticles = useCallback(async (params?: FilterParams) => {
+    const limit = params?.limit || 100;
     try {
         const response = await getAllArticles({
             status: 'published',
             tag: params?.tag,
             search: params?.search,
+            limit : limit,
+            
         });
 
         const mappedArticles = response.data.articles.map(mapApiToLocalArticle);

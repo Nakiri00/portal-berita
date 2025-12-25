@@ -345,25 +345,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.replace('/'); 
   }, [getAuthHeaders]); 
 
-  const updateProfile = React.useCallback(async (profile: Partial<UserProfile>) => {
+  const updateProfile = React.useCallback(async (profileData: FormData | Partial<UserProfile>) => {
     if (!userProfile) return { success: false, message: 'User not logged in' };
     
     setLoading(true);
     try {
+      const token = localStorage.getItem('portal_token');
+      
+      // Tentukan body dan headers berdasarkan tipe data input
+      let body;
+      const headers: HeadersInit = {
+        'Authorization': token ? `Bearer ${token}` : '',
+      };
+
+      if (profileData instanceof FormData) {
+        body = profileData;
+      } else {
+        body = JSON.stringify(profileData);
+        headers['Content-Type'] = 'application/json';
+      }
+
       const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(profile),
+        headers: headers,
+        body: body,
       });
 
       const data = await response.json();
 
       if (data.success) {
         const role = data.data.user.role; 
+        const updatedUser = data.data.user;
+
         setUserProfile({
-          ...data.data.user,
-          joinDate: new Date(data.data.user.createdAt).toLocaleDateString('id-ID')
+          ...updatedUser,
+          avatar: updatedUser.avatar
+            ? `${updatedUser.avatar}?t=${Date.now()}`
+            : updatedUser.avatar,
+          joinDate: new Date(updatedUser.createdAt).toLocaleDateString('id-ID')
         });
+
         
         // LOGIKA ROLE DIPISAH
         setIsAdmin(role === 'admin');

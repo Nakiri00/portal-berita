@@ -1,20 +1,23 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Avatar, AvatarFallback } from './ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { Card, CardContent } from './ui/card';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
-import { Edit, User, Eye, Bookmark, Save, X } from 'lucide-react';
+import { Edit, User, Eye, Bookmark, Save, X, Camera } from 'lucide-react'; 
+import { toast } from 'sonner';
+import { assetUrl } from '../utils/assets';
 
 interface MyAccountProps {
   userProfile: {
     name: string;
     email: string;
     avatar: string;
+    bio?: string;
   };
-  onUpdateProfile: (profile: any) => void;
+  onUpdateProfile: (formData: FormData) => Promise<{ success: boolean; message?: string }>;
   onArticleClick: (articleId: string) => void;
 }
 
@@ -23,19 +26,64 @@ export function MyAccount({ userProfile, onUpdateProfile, onArticleClick }: MyAc
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState({
     ...userProfile,
-    bio: 'Mahasiswa Teknik Informatika yang suka menulis dan berbagi pengalaman.'
+    bio: userProfile.bio || ''
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [currentUserProfile, setUserProfile] = useState(userProfile);
+  const handleAvatarClick = () => {
+    if (isEditing) {
+      fileInputRef.current?.click();
+    }
+  };
 
-  const handleSave = () => {
-    onUpdateProfile(editedProfile);
-    setIsEditing(false);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewImage(objectUrl);
+    }
+  };
+  const handleSave = async () => {
+    setIsLoading(true);
+    try {
+      // [6] Gunakan FormData untuk mengirim data + file
+      const formData = new FormData();
+      formData.append('name', editedProfile.name);
+      formData.append('email', editedProfile.email);
+      formData.append('bio', editedProfile.bio);
+      
+      if (selectedFile) {
+        formData.append('avatar', selectedFile); // Kunci 'avatar' harus sesuai backend
+      }
+
+      const result = await onUpdateProfile(formData);
+
+      if (result.success) {
+        toast.success('Profil berhasil diperbarui');
+        setIsEditing(false);
+        setPreviewImage(null); // Reset preview karena userProfile sudah update
+        setSelectedFile(null);
+      } else {
+        toast.error(result.message || 'Gagal memperbarui profil');
+      }
+    } catch (error) {
+      toast.error('Terjadi kesalahan saat menyimpan perubahan');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancel = () => {
     setEditedProfile({
-      ...userProfile,
-      bio: 'Mahasiswa Teknik Informatika yang suka menulis dan berbagi pengalaman.'
+      ...userProfile, // Gunakan spread operator agar semua field (termasuk avatar) terbawa
+      bio: userProfile.bio || ''
     });
+    setPreviewImage(null);
+    setSelectedFile(null);
     setIsEditing(false);
   };
 
@@ -114,12 +162,43 @@ export function MyAccount({ userProfile, onUpdateProfile, onArticleClick }: MyAc
             <Card className="sticky top-6">
               <CardContent className="p-4 sm:p-6">
                 {/* Profile Summary */}
-                <div className="text-center mb-6">
-                  <Avatar className="h-16 w-16 sm:h-20 sm:w-20 mx-auto mb-4">
-                    <AvatarFallback className="text-lg sm:text-xl">
-                      {editedProfile.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
+                <div className="text-center mb-6 relative">
+                  <div className="relative inline-block">
+                    <Avatar className="h-16 w-16 sm:h-20 sm:w-20 mx-auto mb-4">
+                      <AvatarImage
+                        src={
+                          previewImage
+                            ? previewImage
+                            : editedProfile.avatar
+                            ? assetUrl(editedProfile.avatar)
+                            : undefined
+                        }
+                        alt={editedProfile.name}
+                      />
+                      <AvatarFallback className="text-lg sm:text-xl">
+                        {editedProfile.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+
+
+                    {isEditing && (
+                        <button
+                          onClick={handleAvatarClick}
+                          className="absolute bottom-4 right-0 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors shadow-md"
+                          title="Ganti Foto Profil"
+                        >
+                          <Camera className="h-4 w-4" />
+                        </button>
+                      )}
+
+                      <input 
+                        type="file" 
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        className="hidden" 
+                        accept="image/*"
+                      />
+                  </div>
                   <h3 className="font-medium text-gray-900 mb-1">{editedProfile.name}</h3>
                   <p className="text-sm text-gray-500">{editedProfile.email}</p>
                   

@@ -7,14 +7,15 @@ import { Card, CardContent } from './ui/card';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { Edit, User, Eye, FileText, TrendingUp, Users, Save, X, BarChart3 } from 'lucide-react';
-
+import { toast } from 'sonner';
 interface WriterAccountProps {
   userProfile: {
     name: string;
     email: string;
     avatar: string;
+    bio?: string;
   };
-  onUpdateProfile: (profile: any) => void;
+  onUpdateProfile: (profile: any) => Promise<{ success: boolean; message?: string }>;
   onArticleClick: (articleId: string) => void;
 }
 
@@ -24,18 +25,35 @@ export function WriterAccount({ userProfile, onUpdateProfile, onArticleClick }: 
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState({
     ...userProfile,
-    bio: 'Penulis yang berpengalaman dalam dunia pendidikan dan teknologi. Suka berbagi pengetahuan melalui tulisan.'
+    bio: userProfile.bio || ''
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSave = () => {
-    onUpdateProfile(editedProfile);
-    setIsEditing(false);
+  const handleSave = async () => {
+    setIsLoading(true); // Aktifkan loading
+    try {
+      // Tunggu respon dari backend (AuthContext)
+      const result = await onUpdateProfile(editedProfile);
+
+      if (result.success) {
+        toast.success('Profil berhasil diperbarui');
+        setIsEditing(false); // Tutup hanya jika sukses
+      } else {
+        // Tampilkan pesan error dari backend (misal: "Email sudah digunakan")
+        toast.error(result.message || 'Gagal memperbarui profil');
+      }
+    } catch (error) {
+      toast.error('Terjadi kesalahan saat menyimpan perubahan');
+    } finally {
+      setIsLoading(false); // Matikan loading
+    }
   };
+
 
   const handleCancel = () => {
     setEditedProfile({
       ...userProfile,
-      bio: 'Penulis yang berpengalaman dalam dunia pendidikan dan teknologi. Suka berbagi pengetahuan melalui tulisan.'
+      bio : userProfile.bio || ''
     });
     setIsEditing(false);
   };
