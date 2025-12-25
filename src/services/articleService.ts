@@ -341,3 +341,25 @@ export const toggleArticleLike = async (articleId: string): Promise<LikeToggleRe
   // Asumsi respons dari Backend sesuai dengan LikeToggleResponse
   return response.json();
 };
+
+export const getEditorArticles = async (params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}): Promise<ArticlesResponse> => {
+  const queryParams = new URLSearchParams();
+  
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.limit) queryParams.append('limit', params.limit.toString());
+  if (params?.search) queryParams.append('search', params.search);
+
+  const response = await fetch(`${API_BASE_URL}/articles/editor/all?${queryParams}`, {
+    headers: getAuthHeaders()
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch editor articles');
+  }
+  
+  return response.json();
+};

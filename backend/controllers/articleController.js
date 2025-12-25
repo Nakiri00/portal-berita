@@ -263,6 +263,89 @@ const getWriterArticles = async (req, res) => {
   }
 };
 
+const getEditorArticles = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+
+    // Aggregation Pipeline
+    const pipeline = [
+      // 1. Join dengan tabel Users untuk dapat data role author
+      {
+        $lookup: {
+          from: 'users', // Nama collection user di MongoDB (biasanya lowercase plural)
+          localField: 'author',
+          foreignField: '_id',
+          as: 'authorInfo'
+        }
+      },
+      // 2. Unwind array authorInfo (karena lookup menghasilkan array)
+      { $unwind: '$authorInfo' },
+      // 3. Filter: Hanya ambil artikel yang author-nya memiliki role 'writer' atau 'intern'
+      {
+        $match: {
+          'authorInfo.role': { $in: ['writer', 'intern'] }
+        }
+      }
+    ];
+
+    // 4. Jika ada Search
+    if (search) {
+      pipeline.push({
+        $match: {
+          title: { $regex: search, $options: 'i' }
+        }
+      });
+    }
+
+    // Hitung total untuk pagination (sebelum di-limit)
+    const countPipeline = [...pipeline, { $count: 'total' }];
+    const countResult = await Article.aggregate(countPipeline);
+    const total = countResult.length > 0 ? countResult[0].total : 0;
+
+    // 5. Sorting, Pagination, dan Projection
+    pipeline.push(
+      { $sort: { updatedAt: -1 } }, // Urutkan dari yang terbaru
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
+      {
+        $project: {
+          // Pilih field yang mau ditampilkan
+          title: 1, slug: 1, excerpt: 1, content: 1, category: 1, tags: 1,
+          status: 1, featuredImage: 1, views: 1, createdAt: 1, updatedAt: 1, isFeatured: 1,
+          // Ambil info author dari hasil lookup tadi
+          author: '$authorInfo._id',
+          authorName: '$authorInfo.name',
+          authorRole: '$authorInfo.role',
+          authorAvatar: '$authorInfo.avatar'
+        }
+      }
+    );
+
+    const articles = await Article.aggregate(pipeline);
+
+    res.json({
+      success: true,
+      data: {
+        articles,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Get editor articles error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Gagal mengambil data artikel untuk editor'
+    });
+  }
+};
 // Create new article
 const createArticle = async (req, res) => {
   try {
@@ -585,5 +668,6 @@ module.exports = {
   deleteArticle,
   toggleArticleLike,
   getFeaturedArticles,
-  logArticleViewAndIncrement
+  logArticleViewAndIncrement,
+  getEditorArticles
 };
