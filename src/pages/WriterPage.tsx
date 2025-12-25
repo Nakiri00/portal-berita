@@ -58,6 +58,9 @@ export function WriterPage() {
     imagePreview: ''
   });
   const [submitting, setSubmitting] = useState(false);
+  const isEditor = userProfile?.role === 'editor';
+  const isIntern = userProfile?.role === 'intern';
+  
   const resetForm = () => {
     setFormData({
       title: '',

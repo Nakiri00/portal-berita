@@ -10,7 +10,7 @@ export interface UserProfile {
   instagram?: string;
   facebook?: string;
   threads?: string;
-  role?: 'user' | 'writer' | 'admin';
+  role?: 'user' | 'writer' | 'admin' | 'editor' | 'intern';
 }
 
 export interface ReadHistory {
@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
           setIsLoggedIn(true);
           setIsAdmin(role === 'admin');
-          setIsWriter(role === 'writer' || role === 'admin');
+          setIsWriter(role === 'writer' || role === 'editor' || role === 'intern');
 
           // 2. Fetch and Update Saved Articles (Data yang Terupdate di Backend)
           const resSaved = await fetch(`${API_BASE_URL}/saved-articles`, { 

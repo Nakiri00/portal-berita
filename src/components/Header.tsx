@@ -19,6 +19,7 @@ interface HeaderProps {
     email: string;
     avatar: string;
     bio?: string;
+    role?: string;
   };
   readingHistory: any[];
   savedArticles: any[];
@@ -108,34 +109,6 @@ export function Header({
             </div>
           </div>
 
-          {/* Navigation */}
-          {/* <nav className="hidden md:flex items-center space-x-8">
-            <button 
-              onClick={() => handleNavigation('/berita-terkini')}
-              className={`text-gray-700 hover:text-blue-600 transition-colors bg-transparent border-none cursor-pointer ${
-                isActivePage('/berita-terkini') ? 'text-blue-600 font-medium' : ''
-              }`}
-            >
-              Berita Terkini
-            </button>
-            <button 
-              onClick={() => handleNavigation('/tips-trik')}
-              className={`text-gray-700 hover:text-blue-600 transition-colors bg-transparent border-none cursor-pointer ${
-                isActivePage('/tips-trik') ? 'text-blue-600 font-medium' : ''
-              }`}
-            >
-              Tips & Trik
-            </button>
-            <button 
-              onClick={() => handleNavigation('/tentang')}
-              className={`text-gray-700 hover:text-blue-600 transition-colors bg-transparent border-none cursor-pointer ${
-                isActivePage('/tentang') ? 'text-blue-600 font-medium' : ''
-              }`}
-            >
-              Tentang
-            </button>
-          </nav> */}
-
           {/* Mobile Navigation */}
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
@@ -178,43 +151,6 @@ export function Header({
                   </div>
                 )}
 
-                {/* Navigation Links */}
-                {/* <div className="space-y-2">
-                  <button 
-                    onClick={() => {
-                      handleNavigation('/berita-terkini');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`w-full text-left py-2 px-3 rounded-lg transition-colors bg-transparent border-none ${
-                      isActivePage('/berita-terkini') ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    Berita Terkini
-                  </button>
-                  <button 
-                    onClick={() => {
-                      handleNavigation('/tips-trik');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`w-full text-left py-2 px-3 rounded-lg transition-colors bg-transparent border-none ${
-                      isActivePage('/tips-trik') ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    Tips & Trik
-                  </button>
-                  <button 
-                    onClick={() => {
-                      handleNavigation('/tentang');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`w-full text-left py-2 px-3 rounded-lg transition-colors bg-transparent border-none ${
-                      isActivePage('/tentang') ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    Tentang
-                  </button>
-                </div> */}
-                
                 <div className="border-t pt-4">
                   {isLoggedIn ? (
                     <div className="space-y-2">
