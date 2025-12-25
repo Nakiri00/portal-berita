@@ -74,8 +74,7 @@ export function HomePage({
       if (!a.isHeadline && b.isHeadline) return 1;
       // Finally by read count
       return b.readCount - a.readCount;
-    })
-    .slice(0, 3);
+    });
   
   const regularArticles = filteredArticles
     // Pastikan artikel reguler tidak termasuk di headline

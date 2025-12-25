@@ -116,7 +116,7 @@ export function UserProfileDropdown({
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
               {userProfile.avatar ? (
-                <AvatarImage src={assetUrl(userProfile.avatar)} alt={userProfile.name} />
+                <AvatarImage className='object-cover' src={assetUrl(userProfile.avatar)} alt={userProfile.name} />
               ) : (
                 <AvatarFallback>
                   {userProfile.name.split(' ').map(n => n[0]).join('')}

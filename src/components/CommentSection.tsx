@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 // 💡 IMPORT SERVICE BARU
 import { getComments, postComment, postReply, toggleCommentLike, Comment, Reply, CommentLikeResponse } from '../services/commentService';
 import { assetUrl } from '../utils/assets';
+import { AvatarImage } from '@radix-ui/react-avatar';
 
 function isMainComment(data: Comment | Reply): data is Comment {
     return (data as Comment).replies !== undefined;
@@ -116,16 +117,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
         <div className={`space-y-3 ${isReply ? 'mt-3 pt-3 border-gray-100' : 'mb-6'}`}>
             <div className="flex space-x-3">
                 <Avatar className="h-8 w-8">
-                    <AvatarFallback>
-                        {data.userAvatar ? (
-                            <img 
-                                src={assetUrl(data.userAvatar)}
-                                alt={data.userName}
-                            />
+                    {data.userAvatar ? (
+                        <AvatarImage className='object-cover'
+                            src={assetUrl(data.userAvatar)}
+                            alt={data.userName} />
                         ) : (
-                            data.userName.split(' ').map(n => n[0]).join('')
+                            <AvatarFallback>{data.userName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                         )}
-                    </AvatarFallback>
                 </Avatar>
                 
                 <div className="flex-1">

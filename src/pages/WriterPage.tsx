@@ -147,7 +147,6 @@ export function WriterPage() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-  // Effect untuk me-load data saat component mount atau page/tab berubah
   useEffect(() => {
     if (isWriter || isEditor) {
         fetchData();
@@ -158,7 +157,7 @@ export function WriterPage() {
     setLoading(true);
     try {
         let response;
-        const params = { page: pagination.page, limit: 10 }; // Server-side pagination params
+        const params = { page: pagination.page, limit: 10 };
 
         if (activeTab === 'my-articles') {
             response = await getWriterArticles(params);
@@ -168,7 +167,6 @@ export function WriterPage() {
             setEditorArticles(response.data.articles);
         }
 
-        // Update pagination info dari server
         if (response && response.data.pagination) {
             setPagination({
                 page: response.data.pagination.page,
@@ -191,7 +189,7 @@ export function WriterPage() {
 
   const handleTabChange = (value: string) => {
       setActiveTab(value);
-      setPagination(prev => ({ ...prev, page: 1 })); // Reset ke page 1 saat ganti tab
+      setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -305,7 +303,7 @@ export function WriterPage() {
       if (refreshUser) await refreshUser();
       resetForm();
       
-      fetchData(); // Reload current page
+      fetchData(); 
       
     } catch (error: any) {
       console.error('Error saving article:', error);
@@ -328,7 +326,7 @@ export function WriterPage() {
           if (refreshUser) await refreshUser(); 
           
           toast.success('Artikel berhasil dihapus.');
-          fetchData(); // Reload current page
+          fetchData(); 
       } catch (error: any) {
           console.error('Error deleting article:', error);
           toast.error(error.message || 'Gagal menghapus artikel');
@@ -350,7 +348,6 @@ export function WriterPage() {
     );
   }
 
-  // --- Helper Render List dengan UI Pagination ---
   const renderArticleList = (list: any[], isOtherPeople: boolean = false) => {
     if (loading) {
         return (
@@ -429,7 +426,6 @@ export function WriterPage() {
               </div>
             ))}
 
-            {/* --- PAGINATION CONTROLS UI --- */}
             {pagination.pages > 1 && (
                 <div className="flex items-center justify-between pt-4 border-t mt-6">
                     <div className="text-sm text-gray-500">
@@ -483,242 +479,247 @@ export function WriterPage() {
         </p>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-3 mb-8">
-        {/* KOLOM KIRI: Form Tulis Artikel */}
-        <div className="lg:col-span-2 space-y-6">
-            <Card className="shadow-sm h-full border-t-4 border-t-green-600">
-            <CardHeader className='flex flex-row items-center justify-between bg-gray-50/50 border-b pb-4'>
-                <CardTitle className="flex items-center text-xl">
-                {isEditing ? (
-                    <><Pencil className="w-5 h-5 mr-2 text-blue-600" /> Edit Artikel</>
-                ) : (
-                    <><Plus className="w-5 h-5 mr-2 text-green-600" /> Tulis Artikel Baru</>
-                )}
-                </CardTitle>
-                {isEditing && (
-                <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={resetForm} 
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                    >
-                    <X className="h-4 w-4 mr-1" /> Batal
-                </Button>
-                )}
-            </CardHeader>
-            <CardContent className="pt-6">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                    <Label className="block text-base font-semibold text-gray-700 mb-2">
-                    Judul Artikel <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                    value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    placeholder="Masukkan judul artikel yang menarik"
-                    required
-                    disabled={submitting}
-                    className="text-lg py-5"
-                    />
-                </div>
-                
-                <div className="space-y-3">
-                    <Label className="block text-base font-semibold text-gray-700">
-                    Gambar Thumbnail
-                    </Label>
-                    {isEditing && originalImage && !formData.imageFile ? (
-                    <div className="flex items-center gap-4 p-3 border rounded-lg bg-gray-50">
-                        <img 
-                        src={originalImage} 
-                        alt="Current" 
-                        className="h-16 w-24 object-cover rounded-md border"
-                        />
-                        <div className="text-sm text-gray-500">
-                            <p>Gambar saat ini.</p>
-                            <p className="text-xs">Upload baru untuk mengganti.</p>
-                        </div>
-                    </div>
-                    ) : null} 
-                    
-                    {formData.imageFile || (isEditing && originalImage && !formData.imageFile) ? (
-                    <div className="relative flex items-center justify-between p-4 border rounded-lg bg-blue-50 border-blue-100">
-                        <div className="flex items-center space-x-3 truncate">
-                        <FileText className="h-6 w-6 text-blue-600 flex-shrink-0" />
-                            <span className="text-sm font-medium text-blue-900 truncate">
-                            {formData.imageFile ? formData.imagePreview : originalImage.split('/').pop()}
-                            </span>
-                        </div>
-                        <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-500 hover:bg-red-100 hover:text-red-700"
-                        onClick={removeImage}
-                        disabled={submitting}
-                        type="button"
+      <form onSubmit={handleSubmit}>
+        <div className="grid gap-8 lg:grid-cols-3 mb-8">
+            {/* KOLOM KIRI: Editor Artikel */}
+            <div className="lg:col-span-2 space-y-6">
+                <Card className="shadow-sm h-full border-t-4 border-t-green-600">
+                <CardHeader className='flex flex-row items-center justify-between bg-gray-50/50 border-b pb-4'>
+                    <CardTitle className="flex items-center text-xl">
+                    {isEditing ? (
+                        <><Pencil className="w-5 h-5 mr-2 text-blue-600" /> Edit Artikel</>
+                    ) : (
+                        <><Plus className="w-5 h-5 mr-2 text-green-600" /> Tulis Artikel Baru</>
+                    )}
+                    </CardTitle>
+                    {isEditing && (
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={resetForm} 
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        type="button" 
                         >
-                        <Trash2 className="h-5 w-5" />
-                        </Button>
-                    </div>
-                    ) : (
-                    <Label htmlFor="imageFile" className="cursor-pointer block group">
-                        <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 hover:bg-blue-50/50 transition-all duration-200">
-                        <input
-                            id="imageFile"
-                            type="file"
-                            accept="image/jpeg, image/png, image/jpg"
-                            onChange={handleImageUpload}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
-                            disabled={submitting}
-                        />
-                        <div className="flex flex-col items-center justify-center pointer-events-none">
-                            <div className="bg-blue-100 p-3 rounded-full mb-3 group-hover:bg-blue-200 transition-colors">
-                                <ImageIcon className="h-6 w-6 text-blue-600" />
-                            </div>
-                            <p className="text-base font-medium text-gray-700">Klik untuk Pilih Gambar</p>
-                            <p className="text-xs text-gray-500 mt-1">Maks. 5MB (JPG/PNG)</p>
-                        </div>
-                        </div>
-                    </Label>
+                        <X className="h-4 w-4 mr-1" /> Batal
+                    </Button>
                     )}
-                </div>
-
-                <div>
-                    <Label className="block text-base font-semibold text-gray-700 mb-2">
-                    Konten <span className="text-red-500">*</span>
-                    </Label>
-                    <Textarea
-                    value={formData.content}
-                    onChange={(e) => setFormData({...formData, content: e.target.value})}
-                    placeholder="Tulis konten artikel Anda..."
-                    rows={12}
-                    required
-                    disabled={submitting}
-                    className="min-h-[300px] text-base leading-relaxed p-4"
-                    />
-                </div>
-                
-                <Button type="submit" disabled={submitting} className="w-full h-12 text-lg bg-green-600 hover:bg-green-700 shadow-sm">
-                    {submitting ? (
-                    <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                        Menyimpan...
-                    </>
-                    ) : (
-                    <>
-                        <Save className="w-5 h-5 mr-2" />
-                        Simpan Artikel
-                    </>
-                    )}
-                </Button>
-                </form>
-            </CardContent>
-            </Card>
-        </div>
-
-        {/* KOLOM KANAN: Sidebar (Tags, Featured, Info) */}
-        <div className="lg:col-span-1 space-y-6">
-            <Card>
-                <CardHeader className="pb-3 border-b bg-gray-50/30">
-                    <CardTitle className="text-base font-semibold">Kategori & Tags</CardTitle>
                 </CardHeader>
-                <CardContent className="pt-4">
-                    <div className="flex flex-wrap gap-2">
-                        {AVAILABLE_TAGS.map((tag) => {
-                            const isSelected = formData.tags?.includes(tag) || false;
-                            return (
-                                <Badge
-                                    key={tag}
-                                    variant={isSelected ? 'default' : 'outline'}
-                                    className={`cursor-pointer px-3 py-1.5 text-sm transition-all duration-200 ${
-                                        isSelected 
-                                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm ring-2 ring-blue-600 ring-offset-1' 
-                                        : 'bg-white hover:bg-gray-100 text-gray-600 border-gray-300 hover:border-gray-400'
-                                    }`}
-                                    onClick={() => handleTagToggle(tag)}
+                <CardContent className="pt-6">
+                    <div className="space-y-6">
+                        <div>
+                            <Label className="block text-base font-semibold text-gray-700 mb-2">
+                            Judul Artikel <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                            value={formData.title}
+                            onChange={(e) => setFormData({...formData, title: e.target.value})}
+                            placeholder="Masukkan judul artikel yang menarik"
+                            required
+                            disabled={submitting}
+                            className="text-lg py-5"
+                            />
+                        </div>
+                        
+                        <div className="space-y-3">
+                            <Label className="block text-base font-semibold text-gray-700">
+                            Gambar Thumbnail
+                            </Label>
+                            {isEditing && originalImage && !formData.imageFile ? (
+                            <div className="flex items-center gap-4 p-3 border rounded-lg bg-gray-50">
+                                <img 
+                                src={originalImage} 
+                                alt="Current" 
+                                className="h-16 w-24 object-cover rounded-md border"
+                                />
+                                <div className="text-sm text-gray-500">
+                                    <p>Gambar saat ini.</p>
+                                    <p className="text-xs">Upload baru untuk mengganti.</p>
+                                </div>
+                            </div>
+                            ) : null} 
+                            
+                            {formData.imageFile || (isEditing && originalImage && !formData.imageFile) ? (
+                            <div className="relative flex items-center justify-between p-4 border rounded-lg bg-blue-50 border-blue-100">
+                                <div className="flex items-center space-x-3 truncate">
+                                <FileText className="h-6 w-6 text-blue-600 flex-shrink-0" />
+                                    <span className="text-sm font-medium text-blue-900 truncate">
+                                    {formData.imageFile ? formData.imagePreview : originalImage.split('/').pop()}
+                                    </span>
+                                </div>
+                                <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:bg-red-100 hover:text-red-700"
+                                onClick={removeImage}
+                                disabled={submitting}
+                                type="button"
                                 >
-                                    {tag}
-                                </Badge>
-                            );
-                        })}
+                                <Trash2 className="h-5 w-5" />
+                                </Button>
+                            </div>
+                            ) : (
+                            <Label htmlFor="imageFile" className="cursor-pointer block group">
+                                <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 hover:bg-blue-50/50 transition-all duration-200">
+                                <input
+                                    id="imageFile"
+                                    type="file"
+                                    accept="image/jpeg, image/png, image/jpg"
+                                    onChange={handleImageUpload}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                                    disabled={submitting}
+                                />
+                                <div className="flex flex-col items-center justify-center pointer-events-none">
+                                    <div className="bg-blue-100 p-3 rounded-full mb-3 group-hover:bg-blue-200 transition-colors">
+                                        <ImageIcon className="h-6 w-6 text-blue-600" />
+                                    </div>
+                                    <p className="text-base font-medium text-gray-700">Klik untuk Pilih Gambar</p>
+                                    <p className="text-xs text-gray-500 mt-1">Maks. 5MB (JPG/PNG)</p>
+                                </div>
+                                </div>
+                            </Label>
+                            )}
+                        </div>
+
+                        <div>
+                            <Label className="block text-base font-semibold text-gray-700 mb-2">
+                            Konten <span className="text-red-500">*</span>
+                            </Label>
+                            <Textarea
+                            value={formData.content}
+                            onChange={(e) => setFormData({...formData, content: e.target.value})}
+                            placeholder="Tulis konten artikel Anda..."
+                            rows={12}
+                            required
+                            disabled={submitting}
+                            className="min-h-[300px] text-base leading-relaxed p-4"
+                            />
+                        </div>
                     </div>
-                    {formData.tags?.length === 0 && (
-                        <p className="text-xs text-red-500 mt-2 font-medium">Wajib pilih minimal satu tag.</p>
-                    )}
                 </CardContent>
-            </Card>
+                </Card>
+            </div>
 
-            <Card>
-              <CardHeader className="pb-3 border-b bg-gray-50/30">
-                <CardTitle className="text-base font-semibold flex items-center">
-                  <Star className="h-4 w-4 mr-2 text-yellow-500 fill-yellow-500" />
-                    Featured
-                  </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <div className="space-y-3">
-                  <Label>Jadikan Headline?</Label>
-                    <Select 
-                      value={formData.isFeatured ? 'true' : 'false'} 
-                      onValueChange={(value) => {
-                        setFormData(prev => ({ ...prev, isFeatured: value === 'true' }));
-                      }}
-                      disabled={submitting}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="false">Tidak (Default)</SelectItem>
-                        <SelectItem value="true">Ya, Jadikan Featured</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="text-xs text-gray-500 bg-yellow-50 p-2 rounded border border-yellow-100">
-                      Artikel featured akan muncul di carousel utama beranda.
-                    </div>
-                  </div>
-              </CardContent>
-            </Card>
+            {/* KOLOM KANAN: Sidebar (Tags, Featured, Info) */}
+            <div className="lg:col-span-1 space-y-6">
+                <Card>
+                    <CardHeader className="pb-3 border-b bg-gray-50/30">
+                        <CardTitle className="text-base font-semibold">Kategori & Tags</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                        <div className="flex flex-wrap gap-2">
+                            {AVAILABLE_TAGS.map((tag) => {
+                                const isSelected = formData.tags?.includes(tag) || false;
+                                return (
+                                    <Badge
+                                        key={tag}
+                                        variant={isSelected ? 'default' : 'outline'}
+                                        className={`cursor-pointer px-3 py-1.5 text-sm transition-all duration-200 ${
+                                            isSelected 
+                                            ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm ring-2 ring-blue-600 ring-offset-1' 
+                                            : 'bg-white hover:bg-gray-100 text-gray-600 border-gray-300 hover:border-gray-400'
+                                        }`}
+                                        onClick={() => handleTagToggle(tag)}
+                                    >
+                                        {tag}
+                                    </Badge>
+                                );
+                            })}
+                        </div>
+                        {formData.tags?.length === 0 && (
+                            <p className="text-xs text-red-500 mt-2 font-medium">Wajib pilih minimal satu tag.</p>
+                        )}
+                    </CardContent>
+                </Card>
 
-            <Card>
+                <Card>
                 <CardHeader className="pb-3 border-b bg-gray-50/30">
                     <CardTitle className="text-base font-semibold flex items-center">
-                        <Info className="w-4 h-4 mr-2 text-blue-500" />
-                        Info Publikasi
+                    <Star className="h-4 w-4 mr-2 text-yellow-500 fill-yellow-500" />
+                        Featured
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-4 space-y-4">
-                    <div className="space-y-2">
-                        <Label>Status Artikel</Label>
-                        <Select
-                        value={formData.status}
-                        onValueChange={(val) => setFormData({...formData, status: val as any})}
+                <CardContent className="pt-4">
+                    <div className="space-y-3">
+                    <Label>Jadikan Headline?</Label>
+                        <Select 
+                        value={formData.isFeatured ? 'true' : 'false'} 
+                        onValueChange={(value) => {
+                            setFormData(prev => ({ ...prev, isFeatured: value === 'true' }));
+                        }}
                         disabled={submitting}
                         >
-                            <SelectTrigger className="w-full">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="draft">Draft (Konsep)</SelectItem>
-                                <SelectItem value="published">Published (Tayang)</SelectItem>
-                                {isEditor && <SelectItem value="rejected">Rejected (Tolak)</SelectItem>}
-                            </SelectContent>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Pilih status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="false">Tidak (Default)</SelectItem>
+                            <SelectItem value="true">Ya, Jadikan Featured</SelectItem>
+                        </SelectContent>
                         </Select>
-                    </div>
-
-                    <div className="pt-2 border-t text-sm space-y-2">
-                        <div className="flex justify-between">
-                            <span className="text-gray-500">Penulis:</span>
-                            <span className="font-medium">{userProfile?.name || 'Anda'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-500">Role:</span>
-                            <Badge variant="outline" className="text-xs">{userProfile?.role}</Badge>
+                        <div className="text-xs text-gray-500 bg-yellow-50 p-2 rounded border border-yellow-100">
+                        Artikel featured akan muncul di carousel utama beranda.
                         </div>
                     </div>
                 </CardContent>
-            </Card>
+                </Card>
+
+                <Card>
+                    <CardHeader className="pb-3 border-b bg-gray-50/30">
+                        <CardTitle className="text-base font-semibold flex items-center">
+                            <Info className="w-4 h-4 mr-2 text-blue-500" />
+                            Info Publikasi
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-4 space-y-4">
+                        <div className="space-y-2">
+                            <Label>Status Artikel</Label>
+                            <Select
+                            value={formData.status}
+                            onValueChange={(val) => setFormData({...formData, status: val as any})}
+                            disabled={submitting}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="draft">Draft (Konsep)</SelectItem>
+                                    <SelectItem value="published">Published (Tayang)</SelectItem>
+                                    {isEditor && <SelectItem value="rejected">Rejected (Tolak)</SelectItem>}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="pt-2 border-t text-sm space-y-2">
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">Penulis:</span>
+                                <span className="font-medium">{userProfile?.name || 'Anda'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">Role:</span>
+                                <Badge variant="outline" className="text-xs">{userProfile?.role}</Badge>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
-      </div>
+        
+        <div className="mb-8 flex justify-end">
+            <Button type="submit" disabled={submitting} className="w-full md:w-auto h-12">
+                {submitting ? (
+                <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Menyimpan...
+                </>
+                ) : (
+                <>
+                    <Save className="w-5 h-5 mr-2" />
+                    Simpan Artikel
+                </>
+                )}
+            </Button>
+        </div>
+      </form>
 
       {/* KOLOM BAWAH: List Artikel */}
       <Card className="border-t-4 border-t-blue-600 shadow-md">

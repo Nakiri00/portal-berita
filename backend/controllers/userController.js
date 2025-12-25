@@ -17,8 +17,7 @@ const getUserProfile = catchAsyncErrors(async (req, res, next) => {
     }
 
     // Hanya izinkan profil penulis/admin yang dapat dilihat.
-    // Jika role tidak ada di database, ini akan dihitung sebagai 'user' biasa.
-    if (user.role !== 'writer' && user.role !== 'admin') {
+    if (user.role !== 'writer' && user.role !== 'admin' && user.role !== 'editor' && user.role !== 'intern') {
         return next(new ErrorHandler('Profil tidak tersedia karena bukan penulis atau administrator terdaftar', 404));
     }
 
