@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 
+
 // Create transporter for Gmail
 const createTransporter = () => {
   return nodemailer.createTransport({
@@ -184,13 +185,41 @@ const sendWelcomeEmail = async (email, userName) => {
   }
 };
 
-const sendDraftReviewNotification = async (editorEmail, editorName, articleTitle, authorName, articleId) => {
+// Helper untuk URL Avatar (Pastikan Anda punya env variabel BACKEND_URL, atau ganti hardcode domain)
+const getAvatarUrl = (avatarPath, name) => {
+  if (!avatarPath) {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&size=128`;
+  }
+  if (avatarPath.startsWith('http')) return avatarPath;
+  // Ubah localhost:5000 sesuai domain backend production Anda nanti
+  const baseUrl = 'http://localhost:5000'; 
+  console.log(`${baseUrl}${avatarPath}`);
+  return `${baseUrl}${avatarPath}`;
+};
+
+const senderCardHtml = (name, email, avatar, roleLabel) => `
+  <div style="text-align: center; margin-bottom: 25px; padding-bottom: 25px; border-bottom: 1px solid #e2e8f0;">
+    <p style="color: #64748b; font-size: 11px; font-weight: 700; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">
+      ${roleLabel}
+    </p>
+    <div style="display: inline-block; padding: 3px; border: 2px solid #e2e8f0; border-radius: 50%;">
+      <img src="${getAvatarUrl(avatar, name)}" alt="${name}" 
+           style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; display: block;">
+    </div>
+    <h3 style="color: #1e293b; margin: 10px 0 2px 0; font-size: 16px; font-weight: 600;">${name}</h3>
+    <a href="mailto:${email}" style="color: #3b82f6; text-decoration: none; font-size: 14px;">${email}</a>
+  </div>
+`;
+
+const sendDraftReviewNotification = async (editorEmail, editorName, articleTitle, authorName, articleId,senderData) => {
   try {
     // Check config
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
       console.log('⚠️ Email not configured. Draft notification for:', editorEmail);
       return { success: true, messageId: 'dev-mode' };
     }
+
+    const senderCard = senderData ? senderCardHtml(senderData.name, senderData.email, senderData.avatar, 'Dikirim Oleh Penulis') : '';
 
     const transporter = createTransporter();
     const reviewLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/article/${articleId}`;
@@ -205,6 +234,7 @@ const sendDraftReviewNotification = async (editorEmail, editorName, articleTitle
             <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Draft Baru Masuk</h1>
           </div>
           
+          ${senderCard}
           <div style="padding: 35px; background: #f8fafc;">
             <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
               <p style="color: #475569; margin: 0 0 15px 0;">Halo <strong>${editorName}</strong>,</p>
@@ -302,7 +332,7 @@ const sendVerificationEmail = async (email, verificationToken, userName) => {
   }
 };
 
-const sendArticleStatusNotification = async (authorEmail, authorName, articleTitle, status, articleId, feedback = '') => {
+const sendArticleStatusNotification = async (authorEmail, authorName, articleTitle, status, articleId, feedback = '', senderData) => {
   try {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
       console.log('⚠️ Email not configured. Status notification for:', authorEmail);
@@ -310,6 +340,7 @@ const sendArticleStatusNotification = async (authorEmail, authorName, articleTit
     }
 
     const transporter = createTransporter();
+    const senderCard = senderData ? senderCardHtml(senderData.name, senderData.email, senderData.avatar, 'Dikirim Oleh Penulis') : '';
     
     // Tentukan konten berdasarkan status
     let subject, title, message, buttonText, buttonLink, colorTheme;
@@ -325,7 +356,7 @@ const sendArticleStatusNotification = async (authorEmail, authorName, articleTit
       // Asumsi status 'rejected' atau 'revisi'
       subject = `📝 Perlu Revisi: "${articleTitle}"`;
       title = 'Artikel Memerlukan Revisi';
-      message = `Halo <strong>${authorName}</strong>, Editor telah meninjau artikel Anda dan memberikan beberapa catatan perbaikan sebelum dapat dipublikasikan.`;
+      message = `Editor telah meninjau artikel Anda dan memberikan beberapa catatan perbaikan sebelum dapat dipublikasikan.`;
       buttonText = '✍️ Edit Artikel';
       buttonLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/writer/edit/${articleId}`; // Link ke halaman edit penulis
       colorTheme = '#f59e0b'; // Amber/Orange
@@ -341,6 +372,7 @@ const sendArticleStatusNotification = async (authorEmail, authorName, articleTit
             <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">${title}</h1>
           </div>
           
+          ${senderCard}
           <div style="padding: 35px; background: #f8fafc;">
             <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
               <p style="color: #475569; margin: 0 0 15px 0;">Halo <strong>${authorName}</strong>,</p>

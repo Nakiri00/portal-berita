@@ -453,12 +453,18 @@ const updateArticle = catchAsyncErrors(async (req, res, next) => {
     // Persiapan Update Data
     const oldStatus = article.status;
     const newStatus = req.body.status;
+    const author = await User.findById(article.author); 
+    const currentUser = await User.findById(req.user.id);
+    const senderData = {
+        name: currentUser.name,
+        email: currentUser.email,
+        avatar: currentUser.avatar
+    };
 
     if (newStatus === 'pending review' && oldStatus !== 'pending review') {
       try {
-        const author = await User.findById(article.author); 
+        
         const editors = await User.find({ role: 'editor' });
-
         if (editors.length > 0) {
           // console.log(`📧 (Update) Mengirim notifikasi ke ${editors.length} editor...`);
           await Promise.all(editors.map(editor => {
@@ -468,32 +474,35 @@ const updateArticle = catchAsyncErrors(async (req, res, next) => {
                 editor.name,
                 article.title,
                 author.name,
-                article._id
+                article._id,
+                senderData
               );
             }
           }));
-        }
-
-        if (newStatus !== oldStatus && req.user.role === 'editor' ) {
-          if (newStatus === 'published' || newStatus === 'rejected') {
-            try {
-              await sendArticleStatusNotification(
-                author.email,
-                author.name,
-                article.title,
-                newStatus,
-                article._id,
-                feedback 
-              );
-            } catch (err) {
-              console.error("Email status notification error:", err);
-            }
-          }
         }
       } catch (emailError) {
         console.error("⚠️ Gagal mengirim notifikasi email (Update):", emailError);
       }
     }
+    
+    if (req.user.role === 'editor' && (newStatus === 'published' || newStatus === 'rejected')) {
+        try {
+            // Ambil feedback dari body jika ada (misal untuk revisi)
+            const feedback = req.body.editorFeedback || ''; 
+            await sendArticleStatusNotification(
+                author.email,
+                author.name,
+                article.title,
+                newStatus,
+                article._id,
+                feedback,
+                senderData
+            );
+            console.log(`📧 Notifikasi status ${newStatus} dikirim ke author ${author.email}`);
+        } catch (err) {
+            console.error("Email status notification error:", err);
+        }
+      }
     
     // Set publishedAt jika status berubah jadi published
     if (oldStatus !== 'published' && newStatus === 'published') {
