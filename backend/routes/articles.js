@@ -20,6 +20,7 @@ const router = express.Router();
 router.get('/', getAllArticles); // GET /api/articles
 router.get('/featured', getFeaturedArticles); // GET /api/articles/featured
 router.get('/author/:authorId', getArticlesByAuthor); // GET /api/articles/author/:authorId
+router.get('/editor/manage', authenticate, authorize('editor'), getEditorArticles); // GET /api/articles/editor/manage
 router.get('/:id', optionalAuth, getArticleById); // GET /api/articles/:id
 
 // --- PROTECTED ROUTES ---

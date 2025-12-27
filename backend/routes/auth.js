@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   register,
   login,
+  verifyEmail,
   getProfile,
   updateProfile,
   changePassword,
@@ -12,10 +13,10 @@ const { authenticate } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 const { uploadProfilePicture } = require('../middleware/uploads'); // Pastikan path import benar
-
 // Public routes
 router.post('/register', register);
 router.post('/login', login);
+router.get('/verify/:token', verifyEmail);
 
 // Protected routes
 router.get('/profile', authenticate, getProfile);

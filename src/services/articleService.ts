@@ -1,4 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import api from "./api";
 import axios from "axios";
 
 // Helper function to get auth headers
@@ -27,7 +28,8 @@ export interface Article {
   category: string;
   tags: string[];
   featuredImage: string;
-  status: 'draft' | 'published' | 'archived';
+  status: 'draft' | 'published' | 'pending review';
+  editorFeedback?: string;
   publishedAt: string | null;
   views: number;
   likes: number;
@@ -48,10 +50,11 @@ export interface CreateArticleData {
   category: string;
   tags?: string[];
   featuredImage?: string;
-  status?: 'draft' | 'published' | 'archived';
+  status?: 'draft' | 'published' | 'pending review' ;
   seoTitle?: string;
   seoDescription?: string;
   isFeatured?: boolean;
+  editorFeedback?: string;
 }
 
 interface UpdateArticleData {
@@ -60,9 +63,10 @@ interface UpdateArticleData {
     excerpt?: string;
     category: string;
     tags?: string[];
-    status?: 'draft' | 'published' | 'archived';
+    status?: 'draft' | 'published' | 'pending review' | 'rejected';
     featuredImage?: File | string; 
     isFeatured?: boolean;
+    editorFeedback?: string;
 }
 
 export interface ArticlesResponse {
@@ -265,6 +269,9 @@ export const updateArticle = async (articleId: string, articleData: UpdateArticl
     if (articleData.isFeatured !== undefined) {
         formData.append('isFeatured', articleData.isFeatured.toString());
     }
+    if (articleData.editorFeedback !== undefined) {
+        formData.append('editorFeedback', articleData.editorFeedback);
+    }
     
     const response = await fetch(`${API_BASE_URL}/articles/${articleId}`, {
         method: 'PUT',
@@ -362,4 +369,41 @@ export const getEditorArticles = async (params?: {
   }
   
   return response.json();
+};
+
+export const getPendingDraftsForEditor = async () => {
+  try {
+    const response = await getEditorArticles({ limit: 100 });
+    const articles = response.data.articles;
+    const pendingReviews = articles.filter((article: any) => 
+      article.status === 'pending review' && 
+      (article.authorRole === 'intern' || article.authorRole === 'writer')
+    );
+
+    return pendingReviews;
+  } catch (error) {
+    console.error('Error fetching editor drafts:', error);
+    return [];
+  }
+};
+
+export const getArticlesWithFeedback = async () => {
+  try {
+    // Ambil artikel milik writer sendiri (limit 50 cukup)
+    const response = await getWriterArticles({ limit: 50 });
+    const articles = response.data.articles;
+
+    // Filter artikel yang:
+    // 1. Memiliki feedback dari editor (editorFeedback tidak kosong)
+    // 2. DAN statusnya 'draft' (dikembalikan untuk revisi) atau 'rejected'
+    const feedbackArticles = articles.filter((article: any) => 
+      (article.editorFeedback && article.editorFeedback.trim() !== '') &&
+      (article.status === 'draft' || article.status === 'rejected')
+    );
+
+    return feedbackArticles;
+  } catch (error) {
+    console.error('Error fetching feedback articles:', error);
+    return [];
+  }
 };

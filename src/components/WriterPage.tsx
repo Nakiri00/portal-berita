@@ -129,7 +129,7 @@ export function WriterPage({ onBackClick, onPublish }: WriterPageProps) {
         content: articleToEdit.content,
         tag: articleToEdit.tag,
         image: null,
-        imagePreview: articleToEdit.imageUrl
+        imagePreview: articleToEdit.imageUrl || articleToEdit.featuredImage
       });
       setEditingArticleId(articleId);
       setCurrentView('create');

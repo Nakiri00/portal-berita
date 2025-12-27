@@ -29,6 +29,7 @@ import { ArticleList } from "./pages/ArticleList";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ArticleProvider } from "./contexts/ArticleContext";
 import { BreadcrumbProvider } from "./contexts/BreadcrumbContext";
+import { VerifyEmailPage } from "./pages/VerfifyEmailPage";
 
 function AppContent() {
   const {
@@ -91,7 +92,7 @@ function AppContent() {
           />
 
           <Route
-            path="/writer"
+            path="/writer/edit/:articleId"
             element={
               isLoggedIn && isWriter ? (
                 <WriterPage />
@@ -101,11 +102,22 @@ function AppContent() {
             }
           />
 
+          <Route
+            path="/writer"
+            element={
+              isLoggedIn && isWriter ? (
+                <WriterPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/author/:id" element={<AuthorProfilePage />} />
           <Route path="/tentang" element={<TentangPage />} />
           <Route path="/hubungi-kami" element={<HubungiKamiPage />} />
           <Route path="/admin" element={<AdminPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
           <Route path="/articles" element={<ArticleList />} />

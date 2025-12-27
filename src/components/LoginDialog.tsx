@@ -279,7 +279,7 @@ export function LoginDialog({ isOpen, onClose, onLoginSuccess }: LoginDialogProp
             </button>
           </div>
 
-          {!isRegisterMode && (
+          {/* {!isRegisterMode && (
             <>
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
@@ -290,7 +290,7 @@ export function LoginDialog({ isOpen, onClose, onLoginSuccess }: LoginDialogProp
                 </div>
               </div>
             </>
-          )}
+          )} */}
 
           {/* Social Login - Only for login mode */}
           {/* {!isRegisterMode && (

@@ -60,11 +60,11 @@ export function NewsCard({
                 >
                   {tag}
                 </Badge>
-                {isNew && (
+                {/* {isNew && (
                   <Badge variant="destructive" className="text-xs">
                     TERBARU
                   </Badge>
-                )}
+                )} */}
               </div>
               {isHeadline && (
                 <Badge variant="outline" className="text-xs border-yellow-400 text-yellow-600">

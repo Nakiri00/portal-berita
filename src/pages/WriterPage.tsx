@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect} from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   createArticle, 
@@ -18,8 +19,12 @@ import { Badge } from '../components/ui/badge';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Plus, Save, Image as ImageIcon, Trash2, FileText, Pencil, X, Star, User as UserIcon, Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Save, Image as ImageIcon, Trash2, FileText, Pencil, X, Star, User as UserIcon, Info, ChevronLeft, ChevronRight ,MessageSquare, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog'; 
+import { getArticleById } from '../services/articleService';
+import { assetUrl } from '../utils/assets';
+
 
 // --- Interfaces ---
 interface ArticleForm extends CreateArticleData {
@@ -27,6 +32,7 @@ interface ArticleForm extends CreateArticleData {
     imagePreview: string; 
     tags: string[];
     articleId?: string;
+    editorFeedback?: string;
 }
 
 interface EditorArticle extends Article {
@@ -54,12 +60,14 @@ const toTitleCase = (str: string): string => {
 };
 
 export function WriterPage() {
-  const { userProfile, isWriter, refreshUser } = useAuth();
+  const { userProfile, isWriter, refreshUser,writerArticles} = useAuth();
   
   // --- Data States ---
   const [articles, setArticles] = useState<Article[]>([]); 
   const [editorArticles, setEditorArticles] = useState<EditorArticle[]>([]); 
-  
+  const { articleId } = useParams(); 
+  const navigate = useNavigate();
+
   // --- UI States ---
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -67,6 +75,9 @@ export function WriterPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<{ id: string; title: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [originalAuthor, setOriginalAuthor] = useState<{ name: string; role: string } | null>(null);
+  const [currentView, setCurrentView] = useState<'create' | 'manage'>('manage');
+  const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
   
   // --- Pagination State ---
   const [activeTab, setActiveTab] = useState('my-articles'); 
@@ -86,7 +97,8 @@ export function WriterPage() {
     featuredImage: '', 
     isFeatured: false,
     imageFile: null,
-    imagePreview: ''
+    imagePreview: '',
+    editorFeedback: ''
   });
   
   const isEditor = userProfile?.role === 'editor';
@@ -103,6 +115,7 @@ export function WriterPage() {
       isFeatured: false,
       imageFile: null,
       imagePreview: '',
+      editorFeedback: '',
       articleId: undefined,
     });
     setOriginalImage('');
@@ -112,7 +125,7 @@ export function WriterPage() {
   };
 
   const handleEditClick = (article: Article) => {
-        const currentImageUrl = article.featuredImage || '';
+        const currentImageUrl = assetUrl(article.featuredImage);
         
         let rawTags = article.tags || [];
         let parsedTags: string[] = [];
@@ -138,7 +151,8 @@ export function WriterPage() {
             featuredImage: currentImageUrl, 
             isFeatured: article.isFeatured || false,
             imageFile: null,
-            imagePreview: currentImageUrl ? currentImageUrl.split('/').pop() || 'Gambar Saat Ini' : '',
+            imagePreview: '',
+            editorFeedback: (article as any).editorFeedback || '',
             articleId: article._id,
         });
         
@@ -152,6 +166,100 @@ export function WriterPage() {
         fetchData();
     }
   }, [isWriter, isEditor, pagination.page, activeTab]);
+
+  useEffect(() => {
+    if (articleId) {
+      const loadArticleForEdit = async () => {
+        setLoading(true);
+        
+        try {
+          // 1. Coba cari di context lokal (writerArticles) dulu
+          // Perhatikan: properti di writerArticles mungkin menggunakan 'id' bukan '_id' dan 'tag' tunggal
+          const formatTag = (t: string) => toTitleCase(t.trim());
+
+          // 1. Coba cari di context lokal (writerArticles)
+          const localArticle = writerArticles.find((a: any) => a.id === articleId || a._id === articleId);
+          
+          if (localArticle) {
+            // Normalisasi Tags
+            let tags: string[] = [];
+            if (Array.isArray(localArticle.tags)) {
+                tags = localArticle.tags.map(formatTag);
+            } else if (typeof localArticle.tag === 'string') {
+                tags = [formatTag(localArticle.tag)];
+            }
+            
+            setFormData({
+              title: localArticle.title,
+              content: localArticle.content,
+              category: localArticle.category || 'berita',
+              tags: tags,
+              status: localArticle.status || 'draft',
+              featuredImage: localArticle.imageUrl || localArticle.featuredImage || '',
+              isFeatured: localArticle.isFeatured || false,
+              imageFile: null,
+              imagePreview: localArticle.imageUrl || localArticle.featuredImage || '',
+              articleId: articleId
+            });
+            
+            setOriginalImage(localArticle.imageUrl || localArticle.featuredImage || '');
+            setOriginalAuthor({
+                name: userProfile?.name || 'Anda',
+                role: userProfile?.role || 'writer'
+            });
+            setIsEditing(true);
+            setEditingArticleId(articleId);
+            // setCurrentView('create'); // 
+          } else {
+            // 2. Jika tidak ada di lokal (misal Editor mengedit punya Intern), ambil dari API
+            const response = await getArticleById(articleId);
+            const apiArticle = response.data.article;
+            
+            const imageUrl = assetUrl(apiArticle.featuredImage);
+
+            // Normalisasi Tags dari API (yang lowercase) ke Title Case
+            const tags = (apiArticle.tags || []).map(formatTag);
+
+            setFormData({
+              title: apiArticle.title,
+              content: apiArticle.content,
+              category: apiArticle.category || 'berita',
+              tags: tags, // Tags yang sudah diformat
+              status: apiArticle.status as any,
+              featuredImage: imageUrl,
+              isFeatured: apiArticle.isFeatured,
+              imageFile: null,
+              imagePreview: imageUrl,
+              editorFeedback: apiArticle.editorFeedback || '',
+              articleId: apiArticle._id
+            });
+
+            setOriginalImage(imageUrl);
+            
+            // [BARU] Set Info Penulis dari API
+            setOriginalAuthor({
+                name: apiArticle.authorName,
+                role: (apiArticle.author as any)?.role || 'writer' // Pastikan backend populate field ini
+            });
+
+            setIsEditing(true);
+            setEditingArticleId(apiArticle._id);
+          }
+          
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        } catch (error) {
+          console.error("Gagal memuat artikel:", error);
+          toast.error("Gagal memuat artikel untuk diedit");
+          navigate('/writer'); 
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      loadArticleForEdit();
+    }
+  }, [articleId, writerArticles, navigate]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -209,10 +317,11 @@ export function WriterPage() {
       return;
     }
 
+    const objectUrl = URL.createObjectURL(file);
     setFormData(prev => ({ 
       ...prev, 
       imageFile: file,
-      imagePreview: file.name
+      imagePreview: objectUrl
     }));
   };
   
@@ -270,6 +379,9 @@ export function WriterPage() {
       status: formData.status ?? 'draft',
       isFeatured: formData.isFeatured,
       excerpt: formData.content.substring(0, 150) + '...',
+      ...(formData.editorFeedback?.trim()
+        ? { editorFeedback: formData.editorFeedback }
+        : {})
     };
 
     if (isUpdate && !formData.imageFile && originalImage) {
@@ -292,6 +404,10 @@ export function WriterPage() {
           formDataToSend.append('status', dataToSend.status ?? 'draft');
           formDataToSend.append('isFeatured', dataToSend.isFeatured.toString());
           formDataToSend.append('excerpt', dataToSend.content.substring(0, 150) + '...');
+          
+          if (dataToSend.editorFeedback) {
+            formDataToSend.append('editorFeedback', dataToSend.editorFeedback);
+          }
       
           if (dataToSend.featuredImage instanceof File) {
               formDataToSend.append('imageFile', dataToSend.featuredImage); 
@@ -506,6 +622,41 @@ export function WriterPage() {
                 </CardHeader>
                 <CardContent className="pt-6">
                     <div className="space-y-6">
+                        <div className="mb-6">
+                            {isEditor ? (
+                                // TAMPILAN UNTUK EDITOR: Input Feedback
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                    <Label className="flex items-center text-yellow-800 font-semibold mb-2">
+                                        <MessageSquare className="w-4 h-4 mr-2" />
+                                        Catatan Review / Feedback untuk Penulis
+                                    </Label>
+                                    <Textarea
+                                        value={formData.editorFeedback}
+                                        onChange={(e) => setFormData({...formData, editorFeedback: e.target.value})}
+                                        placeholder="Tulis alasan penolakan atau saran perbaikan di sini..."
+                                        rows={3}
+                                        className="bg-white border-yellow-300 focus:border-yellow-500"
+                                        disabled={submitting}
+                                    />
+                                    <p className="text-xs text-yellow-600 mt-2">
+                                        Catatan ini akan muncul di dashboard penulis saat mereka mengedit artikel ini.
+                                    </p>
+                                </div>
+                            ) : (
+                                // TAMPILAN UNTUK PENULIS: Read-Only Feedback
+                                formData.editorFeedback && (
+                                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <h4 className="font-semibold text-red-800 text-sm mb-1">Catatan dari Editor:</h4>
+                                            <p className="text-red-700 text-sm leading-relaxed">
+                                                {formData.editorFeedback}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )
+                            )}
+                        </div>
                         <div>
                             <Label className="block text-base font-semibold text-gray-700 mb-2">
                             Judul Artikel <span className="text-red-500">*</span>
@@ -522,76 +673,85 @@ export function WriterPage() {
                         
                         <div className="space-y-3">
                             <Label className="block text-base font-semibold text-gray-700">
-                            Gambar Thumbnail
+                                Gambar Thumbnail
                             </Label>
-                            {isEditing && originalImage && !formData.imageFile ? (
-                            <div className="flex items-center gap-4 p-3 border rounded-lg bg-gray-50">
-                                <img 
-                                src={originalImage} 
-                                alt="Current" 
-                                className="h-16 w-24 object-cover rounded-md border"
-                                />
-                                <div className="text-sm text-gray-500">
-                                    <p>Gambar saat ini.</p>
-                                    <p className="text-xs">Upload baru untuk mengganti.</p>
-                                </div>
-                            </div>
-                            ) : null} 
-                            
-                            {formData.imageFile || (isEditing && originalImage && !formData.imageFile) ? (
-                            <div className="relative flex items-center justify-between p-4 border rounded-lg bg-blue-50 border-blue-100">
-                                <div className="flex items-center space-x-3 truncate">
-                                <FileText className="h-6 w-6 text-blue-600 flex-shrink-0" />
-                                    <span className="text-sm font-medium text-blue-900 truncate">
-                                    {formData.imageFile ? formData.imagePreview : originalImage.split('/').pop()}
-                                    </span>
-                                </div>
-                                <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-500 hover:bg-red-100 hover:text-red-700"
-                                onClick={removeImage}
-                                disabled={submitting}
-                                type="button"
-                                >
-                                <Trash2 className="h-5 w-5" />
-                                </Button>
-                            </div>
-                            ) : (
-                            <Label htmlFor="imageFile" className="cursor-pointer block group">
-                                <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 hover:bg-blue-50/50 transition-all duration-200">
-                                <input
-                                    id="imageFile"
-                                    type="file"
-                                    accept="image/jpeg, image/png, image/jpg"
-                                    onChange={handleImageUpload}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
-                                    disabled={submitting}
-                                />
-                                <div className="flex flex-col items-center justify-center pointer-events-none">
-                                    <div className="bg-blue-100 p-3 rounded-full mb-3 group-hover:bg-blue-200 transition-colors">
-                                        <ImageIcon className="h-6 w-6 text-blue-600" />
+                            {formData.imagePreview || (isEditing && originalImage) ? (
+                                <div className="flex items-center gap-4 p-3 border rounded-lg bg-gray-50 relative group">
+                                    
+                                    {/* GAMBAR PREVIEW */}
+                                    <img 
+                                        // Prioritas: Preview Blob Baru -> Gambar Lama Server
+                                        src={formData.imagePreview || originalImage} 
+                                        alt="Thumbnail" 
+                                        className="h-16 w-24 object-cover rounded-md border bg-white"
+                                    />
+                                    
+                                    {/* TEKS INFO FILE */}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-700 truncate">
+                                            {/* Jika ada file baru (upload), ambil namanya dari object File */}
+                                            {formData.imageFile 
+                                                ? formData.imageFile.name 
+                                                // Jika edit mode (dan belum ganti), ambil nama dari URL original
+                                                : originalImage.split('/').pop() || "Gambar Tersimpan"
+                                            }
+                                        </p>
+                                        {/* <p className="text-xs text-gray-500">
+                                            {formData.imageFile 
+                                                ? "Siap untuk disimpan (File Baru)." 
+                                                : "Gambar saat ini (Dari Server)."
+                                            }
+                                        </p> */}
                                     </div>
-                                    <p className="text-base font-medium text-gray-700">Klik untuk Pilih Gambar</p>
-                                    <p className="text-xs text-gray-500 mt-1">Maks. 5MB (JPG/PNG)</p>
+
+                                    {/* TOMBOL HAPUS / RESET */}
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8"
+                                        onClick={removeImage}
+                                        title="Hapus / Ganti Gambar"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
                                 </div>
-                                </div>
-                            </Label>
+                            ) : (
+                                // TAMPILAN INPUT UPLOAD (JIKA BELUM ADA GAMBAR SAMA SEKALI)
+                                <Label htmlFor="imageFile" className="cursor-pointer block group">
+                                    <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 hover:bg-blue-50/50 transition-all duration-200">
+                                        <input
+                                            id="imageFile"
+                                            type="file"
+                                            accept="image/jpeg, image/png, image/jpg"
+                                            onChange={handleImageUpload}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                                            disabled={submitting}
+                                        />
+                                        <div className="flex flex-col items-center justify-center pointer-events-none">
+                                            <div className="bg-blue-100 p-3 rounded-full mb-3 group-hover:bg-blue-200 transition-colors">
+                                                <ImageIcon className="h-6 w-6 text-blue-600" />
+                                            </div>
+                                            <p className="text-base font-medium text-gray-700">Klik untuk Pilih Gambar</p>
+                                            <p className="text-xs text-gray-500 mt-1">Maks. 5MB (JPG/PNG)</p>
+                                        </div>
+                                    </div>
+                                </Label>
                             )}
                         </div>
 
                         <div>
                             <Label className="block text-base font-semibold text-gray-700 mb-2">
-                            Konten <span className="text-red-500">*</span>
+                                Konten <span className="text-red-500">*</span>
                             </Label>
                             <Textarea
-                            value={formData.content}
-                            onChange={(e) => setFormData({...formData, content: e.target.value})}
-                            placeholder="Tulis konten artikel Anda..."
-                            rows={12}
-                            required
-                            disabled={submitting}
-                            className="min-h-[300px] text-base leading-relaxed p-4"
+                                value={formData.content}
+                                onChange={(e) => setFormData({...formData, content: e.target.value})}
+                                placeholder="Tulis konten artikel Anda..."
+                                rows={36}
+                                required
+                                disabled={submitting}
+                                className="min-h-[300px] text-base leading-relaxed p-4"
                             />
                         </div>
                     </div>
@@ -673,31 +833,65 @@ export function WriterPage() {
                     <CardContent className="pt-4 space-y-4">
                         <div className="space-y-2">
                             <Label>Status Artikel</Label>
-                            <Select
-                            value={formData.status}
-                            onValueChange={(val) => setFormData({...formData, status: val as any})}
-                            disabled={submitting}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="draft">Draft (Konsep)</SelectItem>
-                                    <SelectItem value="published">Published (Tayang)</SelectItem>
-                                    {isEditor && <SelectItem value="rejected">Rejected (Tolak)</SelectItem>}
-                                </SelectContent>
-                            </Select>
+                            {userProfile?.role === 'intern' ? (
+                                // TAMPILAN KHUSUS INTERN (Terkunci)
+                                <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                    <span className="text-sm font-medium text-blue-700 flex items-center">
+                                        <Info className="w-4 h-4 mr-2" />
+                                        Menunggu Review Editor
+                                    </span>
+                                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
+                                        Otomatis
+                                    </Badge>
+                                </div>
+                            ) : (
+                                // TAMPILAN NORMAL (Writer/Editor) - Dropdown bisa dipilih
+                                <Select
+                                    value={formData.status}
+                                    onValueChange={(val) => setFormData({...formData, status: val as any})}
+                                    disabled={submitting}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="draft">Draft (Konsep)</SelectItem>
+                                        <SelectItem value="published">Published (Tayang)</SelectItem>
+                                        <SelectItem value="pending review">Pending Review (Menunggu Review)</SelectItem>
+                                        {isEditor && <SelectItem value="rejected">Rejected (Tolak)</SelectItem>}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                            
+                            {/* Pesan bantuan kecil */}
+                            {userProfile?.role === 'intern' && (
+                                <p className="text-[10px] text-gray-500 mt-1">
+                                    Sebagai Intern, artikel Anda akan dikirim ke Editor untuk ditinjau sebelum terbit.
+                                </p>
+                            )}
                         </div>
 
                         <div className="pt-2 border-t text-sm space-y-2">
                             <div className="flex justify-between">
                                 <span className="text-gray-500">Penulis:</span>
-                                <span className="font-medium">{userProfile?.name || 'Anda'}</span>
+                                {/* Tampilkan Nama Penulis Asli jika ada, kalau tidak pakai user login */}
+                                <span className="font-medium text-gray-900">
+                                    {originalAuthor ? originalAuthor.name : (userProfile?.name || 'Anda')}
+                                </span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-gray-500">Role:</span>
-                                <Badge variant="outline" className="text-xs">{userProfile?.role}</Badge>
+                                <Badge variant="outline" className="text-xs">
+                                    {originalAuthor ? originalAuthor.role : userProfile?.role}
+                                </Badge>
                             </div>
+                            
+                            {/* Tambahan Info: Jika Editor sedang melihat artikel orang lain */}
+                            {originalAuthor && originalAuthor.name !== userProfile?.name && (
+                                <div className="mt-2 text-xs bg-yellow-50 text-yellow-800 p-2 rounded border border-yellow-200">
+                                    Anda sedang meninjau artikel milik <strong>{originalAuthor.name}</strong>.
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>

@@ -11,6 +11,7 @@ export interface UserProfile {
   facebook?: string;
   threads?: string;
   role?: 'user' | 'writer' | 'admin' | 'editor' | 'intern';
+  isVerified?: boolean;
 }
 
 export interface ReadHistory {
@@ -270,7 +271,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsAdmin(newRole === 'admin');
         setIsWriter(newRole === 'writer' || newRole === 'admin');
         
-        return { success: true };
+        return { success: true , message: data.message };
       } else {
         return { success: false, message: data.message };
       }

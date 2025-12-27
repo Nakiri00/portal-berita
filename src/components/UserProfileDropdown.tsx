@@ -19,6 +19,7 @@ import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { useAuth } from '../contexts/AuthContext'; 
 import dayjs from 'dayjs';
+import { AlertTriangle } from 'lucide-react';
 
 import { 
   User, 
@@ -123,6 +124,7 @@ export function UserProfileDropdown({
                 </AvatarFallback>
               )}
             </Avatar>
+            
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-80" align="end" forceMount>
@@ -146,6 +148,14 @@ export function UserProfileDropdown({
                   <div className="flex items-center text-xs text-muted-foreground mt-1">
                     <Calendar className="h-3 w-3 mr-1" />
                     <span>Bergabung {userProfile.joinDate}</span>
+                  </div>
+                )}
+                {!userProfile.isVerified && (
+                  <div className="flex items-center text-xs text-muted-foreground mt-1 text-yellow-600">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                      <p>
+                        Email Anda Belum Terverifikasi
+                      </p>
                   </div>
                 )}
               </div>

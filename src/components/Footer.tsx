@@ -52,7 +52,7 @@ export function Footer() {
             {/* Social Media */}
             <div className="flex space-x-3 sm:space-x-4">
               <a 
-                href="#" 
+                href="https://www.instagram.com/kamusmahasiswa/" 
                 className="bg-blue-600 hover:bg-blue-500 p-2 rounded-lg transition-colors"
                 aria-label="Instagram"
               >

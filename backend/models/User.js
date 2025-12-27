@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -53,6 +54,14 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  resetPasswordToken: String,
+  resetPasswordExpire: Date,
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationToken: String,
+  verificationTokenExpire: Date,
   lastLogin: {
     type: Date,
     default: Date.now
@@ -120,5 +129,37 @@ userSchema.methods.toJSON = function() {
 // Index untuk performa (email sudah unique, jadi tidak perlu index manual)
 userSchema.index({ role: 1 });
 userSchema.index({ isActive: 1 });
+
+userSchema.methods.getVerificationToken = function() {
+  // Generate token random
+  const verificationToken = crypto.randomBytes(20).toString('hex');
+
+  // Hash token dan simpan ke database (opsional: hash untuk keamanan ekstra)
+  this.verificationToken = crypto
+    .createHash('sha256')
+    .update(verificationToken)
+    .digest('hex');
+
+  // Set expire 24 jam
+  this.verificationTokenExpire = Date.now() + 24 * 60 * 60 * 1000;
+
+  return verificationToken; // Return token mentah untuk dikirim via email
+};
+
+userSchema.methods.getResetPasswordToken = function() {
+  // 1. Generate token random
+  const resetToken = crypto.randomBytes(20).toString('hex');
+
+  // 2. Hash token dan simpan ke field resetPasswordToken
+  this.resetPasswordToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+
+  // 3. Set expire (misal 1 jam)
+  this.resetPasswordExpire = Date.now() + 60 * 60 * 1000;
+
+  return resetToken; // Return token mentah untuk dikirim ke email
+};
 
 module.exports = mongoose.model('User', userSchema);

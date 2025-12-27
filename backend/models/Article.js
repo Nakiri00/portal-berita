@@ -57,12 +57,16 @@ const articleSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['draft', 'published', 'archived', 'pending review', 'rejected'],
+    enum: ['draft', 'published', 'pending review', 'rejected'],
     default: 'draft'
   },
   publishedAt: {
     type: Date,
     default: null
+  },
+  editorFeedback: {
+    type: String,
+    default: ''
   },
   views: {
     type: Number,

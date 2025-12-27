@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const ErrorHandler = require('../utils/errorHandler');
 const catchAsyncErrors = require('../middleware/catchAsyncErrors');
+const { sendVerificationEmail } = require('../services/emailService');
+
 
 // Get all users (admin only)
 const getAllUsers = async (req, res) => {
@@ -264,38 +266,60 @@ const getUserStats = async (req, res) => {
 };
 
 const createWriter = catchAsyncErrors(async (req, res, next) => {
-  const { name, email, password, role } = req.body;
+  try {
+    const { name, email, password, role } = req.body;
 
-  if (!name || !email || !password) {
-    return next(new ErrorHandler('Harap isi nama, email, dan password', 400));
+    if (!name || !email || !password) {
+      return next(new ErrorHandler('Harap isi nama, email, dan password', 400));
+    }
+    
+    // Validasi password
+    if (password.length < 8) {
+      return next(new ErrorHandler('Password minimal harus 8 karakter', 400));
+    }
+
+    // Validasi Role yang diizinkan
+    const validRoles = ['intern', 'writer', 'editor', 'admin'];
+    const userRole = validRoles.includes(role) ? role : 'writer';
+
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return next(new ErrorHandler('Email sudah terdaftar', 400));
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password, 
+      role: userRole,
+      isVerified: false
+    });
+    const verificationToken = user.getVerificationToken();
+
+    await user.save();
+    try {
+      await sendVerificationEmail(user.email, verificationToken, user.name);
+    } catch (emailError) {
+      console.error("Gagal kirim email verifikasi:", emailError);
+
+      return res.status(201).json({
+        success: true,
+        message: 'User dibuat, tapi GAGAL mengirim email verifikasi. Silakan minta user reset password atau kirim ulang.',
+        data: user
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: `Akun ${role} berhasil dibuat! Email verifikasi telah dikirim ke ${email}.`,
+      data: user
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Gagal membuat user' });
   }
-  
-  // Validasi password
-  if (password.length < 8) {
-    return next(new ErrorHandler('Password minimal harus 8 karakter', 400));
-  }
 
-  // Validasi Role yang diizinkan
-  const validRoles = ['intern', 'writer', 'editor', 'admin'];
-  const userRole = validRoles.includes(role) ? role : 'writer';
-
-  const userExists = await User.findOne({ email });
-  if (userExists) {
-    return next(new ErrorHandler('Email sudah terdaftar', 400));
-  }
-
-  const user = await User.create({
-    name,
-    email,
-    password, 
-    role: userRole
-  });
-
-  res.status(201).json({
-    success: true,
-    user,
-    message: `Akun ${userRole} berhasil dibuat`
-  });
 });
 
 module.exports = {

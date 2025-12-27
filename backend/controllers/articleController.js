@@ -2,6 +2,7 @@ const Article = require('../models/Article');
 const User = require('../models/User');
 const catchAsyncErrors = require('../middleware/catchAsyncErrors');
 const ErrorHandler = require('../utils/errorHandler');
+const { sendDraftReviewNotification } = require('../services/emailService');
 const fs = require('fs');
 const path = require('path');
 
@@ -353,8 +354,8 @@ const createArticle = async (req, res) => {
     const imageFile = req.file;
 
     // LOGIC: Intern tidak bisa create article dengan status Published
-    if (req.user.role === 'intern' && status === 'published') {
-        status = 'draft'; 
+    if (req.user.role === 'intern') {
+        status = 'pending review'; 
     }
 
     if (!title || !content) {
@@ -383,6 +384,33 @@ const createArticle = async (req, res) => {
 
     await article.save();
     await article.populate('author', 'name email avatar');
+
+    if (status === 'pending review') {
+      try {
+        // 1. Cari semua user dengan role 'editor'
+        const editors = await User.find({ role: 'editor' }).select('name email');
+        
+        if (editors.length > 0) {
+          console.log(`Sending notifications to ${editors.length} editors...`);
+          
+          // 2. Kirim email ke setiap editor (gunakan Promise.all agar paralel)
+          // Kita tidak menggunakan 'await' pada Promise.all ini agar response ke user 
+          // tidak tertunda jika pengiriman email lambat (Fire and Forget)
+          Promise.all(editors.map(editor => 
+            sendDraftReviewNotification(
+              editor.email,
+              editor.name,
+              article.title,
+              author.name,
+              article._id
+            )
+          )).catch(err => console.error('Error sending bulk emails:', err));
+        }
+      } catch (emailError) {
+        // Error handling khusus email agar tidak mengganggu response sukses pembuatan artikel
+        console.error('Failed to initiate email notification flow:', emailError);
+      }
+    }
 
     res.status(201).json({
       success: true,
@@ -413,16 +441,14 @@ const updateArticle = catchAsyncErrors(async (req, res, next) => {
       return next(new ErrorHandler('Tidak diizinkan mengedit artikel orang lain', 403));
     }
 
-    // 3. LOGIC INTERN (Safe Learning Mode)
+    // 3. LOGIC INTERN 
     if (req.user.role === 'intern') {
-      // Tidak boleh edit jika artikel sudah diproses/tayang
-      if (article.status !== 'draft' && article.status !== 'rejected') {
-          return next(new ErrorHandler('Artikel sedang diproses/sudah tayang, tidak bisa diedit.', 403));
-      }
-      // Tidak boleh mengubah status jadi published secara paksa
-      if (req.body.status === 'published') {
-          req.body.status = 'draft';
-      }
+        const reqStatus = req.body.status;
+        // Cek jika status yang dikirim valid untuk intern
+        if (reqStatus && reqStatus !== 'draft' && reqStatus !== 'pending review') {
+             // Jika intern mencoba publish, paksa jadi pending review (atau tetap status lama)
+             req.body.status = 'pending review'; 
+        }
     }
 
     // Persiapan Update Data
@@ -432,6 +458,11 @@ const updateArticle = catchAsyncErrors(async (req, res, next) => {
     // Set publishedAt jika status berubah jadi published
     if (oldStatus !== 'published' && newStatus === 'published') {
         req.body.publishedAt = Date.now();
+    }
+
+    let feedbackUpdate = {};
+    if (req.user.role === 'editor' && req.body.editorFeedback !== undefined) {
+        feedbackUpdate.editorFeedback = req.body.editorFeedback;
     }
 
     // Handle Image Update
@@ -466,6 +497,7 @@ const updateArticle = catchAsyncErrors(async (req, res, next) => {
     const updatedData = {
         ...req.body,
         ...imageUpdate,
+        ...feedbackUpdate,
         updatedAt: Date.now()
     };
 
