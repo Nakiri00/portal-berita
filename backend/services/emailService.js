@@ -196,7 +196,7 @@ const sendDraftReviewNotification = async (editorEmail, editorName, articleTitle
     const reviewLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/article/${articleId}`;
     
     const mailOptions = {
-      from: `"Kamus Mahasiswa System" <${process.env.EMAIL_USER}>`,
+      from: `"Kamus Mahasiswa" <${process.env.EMAIL_USER}>`,
       to: editorEmail,
       subject: `📝 Butuh Review: Draft Baru dari ${authorName}`,
       html: `
@@ -207,10 +207,10 @@ const sendDraftReviewNotification = async (editorEmail, editorName, articleTitle
           
           <div style="padding: 35px; background: #f8fafc;">
             <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-              <p style="color: #475569; margin: 0 0 15px 0;">Halo Editor <strong>${editorName}</strong>,</p>
+              <p style="color: #475569; margin: 0 0 15px 0;">Halo <strong>${editorName}</strong>,</p>
               
               <p style="color: #475569; line-height: 1.6;">
-                Seorang Intern, <strong>${authorName}</strong>, baru saja membuat draft artikel baru yang memerlukan tinjauan Anda sebelum dipublikasikan.
+                <strong>${authorName}</strong>, baru saja membuat draft artikel baru yang memerlukan tinjauan Anda sebelum dipublikasikan.
               </p>
 
               <div style="background: #f1f5f9; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #3b82f6;">
@@ -302,9 +302,94 @@ const sendVerificationEmail = async (email, verificationToken, userName) => {
   }
 };
 
+const sendArticleStatusNotification = async (authorEmail, authorName, articleTitle, status, articleId, feedback = '') => {
+  try {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+      console.log('⚠️ Email not configured. Status notification for:', authorEmail);
+      return { success: true, messageId: 'dev-mode' };
+    }
+
+    const transporter = createTransporter();
+    
+    // Tentukan konten berdasarkan status
+    let subject, title, message, buttonText, buttonLink, colorTheme;
+
+    if (status === 'published') {
+      subject = `🚀 Hore! Artikel Terbit: "${articleTitle}"`;
+      title = 'Artikel Anda Telah Terbit!';
+      message = `Selamat <strong>${authorName}</strong>! Artikel Anda telah disetujui oleh editor dan sekarang sudah tayang di Kamus Mahasiswa.`;
+      buttonText = '🌍 Lihat Artikel';
+      buttonLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/article/${articleId}`;
+      colorTheme = '#10b981'; // Green
+    } else {
+      // Asumsi status 'rejected' atau 'revisi'
+      subject = `📝 Perlu Revisi: "${articleTitle}"`;
+      title = 'Artikel Memerlukan Revisi';
+      message = `Halo <strong>${authorName}</strong>, Editor telah meninjau artikel Anda dan memberikan beberapa catatan perbaikan sebelum dapat dipublikasikan.`;
+      buttonText = '✍️ Edit Artikel';
+      buttonLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/writer/edit/${articleId}`; // Link ke halaman edit penulis
+      colorTheme = '#f59e0b'; // Amber/Orange
+    }
+
+    const mailOptions = {
+      from: `"Kamus Mahasiswa Editor" <${process.env.EMAIL_USER}>`,
+      to: authorEmail,
+      subject: subject,
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+          <div style="background: linear-gradient(135deg, ${colorTheme} 0%, #3b82f6 100%); padding: 25px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">${title}</h1>
+          </div>
+          
+          <div style="padding: 35px; background: #f8fafc;">
+            <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+              <p style="color: #475569; margin: 0 0 15px 0;">Halo <strong>${authorName}</strong>,</p>
+              
+              <p style="color: #475569; line-height: 1.6;">
+                ${message}
+              </p>
+
+              <div style="background: #f1f5f9; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid ${colorTheme};">
+                <p style="margin: 0; color: #1e293b; font-weight: bold;">Judul Artikel:</p>
+                <p style="margin: 5px 0 0 0; color: #475569; font-style: italic;">"${articleTitle}"</p>
+                
+                ${feedback ? `
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
+                <p style="margin: 0; color: #1e293b; font-weight: bold;">Catatan Editor:</p>
+                <p style="margin: 5px 0 0 0; color: #ef4444; font-style: italic;">"${feedback}"</p>
+                ` : ''}
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${buttonLink}" 
+                   style="background: ${colorTheme}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                  ${buttonText}
+                </a>
+              </div>
+
+              <p style="color: #94a3b8; font-size: 12px; text-align: center; margin-top: 20px;">
+                Semangat berkarya! 🚀
+              </p>
+            </div>
+          </div>
+        </div>
+      `
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log(`✅ Status email sent to ${authorName} (${status})`);
+    return { success: true, messageId: result.messageId };
+
+  } catch (error) {
+    console.error('❌ Notification failed:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendResetPasswordEmail,
   sendWelcomeEmail,
   sendDraftReviewNotification,
-  sendVerificationEmail
+  sendVerificationEmail,
+  sendArticleStatusNotification
 };

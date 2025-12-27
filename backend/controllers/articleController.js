@@ -2,7 +2,7 @@ const Article = require('../models/Article');
 const User = require('../models/User');
 const catchAsyncErrors = require('../middleware/catchAsyncErrors');
 const ErrorHandler = require('../utils/errorHandler');
-const { sendDraftReviewNotification } = require('../services/emailService');
+const { sendDraftReviewNotification, sendArticleStatusNotification } = require('../services/emailService');
 const fs = require('fs');
 const path = require('path');
 
@@ -387,28 +387,27 @@ const createArticle = async (req, res) => {
 
     if (status === 'pending review') {
       try {
-        // 1. Cari semua user dengan role 'editor'
-        const editors = await User.find({ role: 'editor' }).select('name email');
+        const author = await User.findById(req.user.id);
         
+        const editors = await User.find({ role: 'editor' });
+
         if (editors.length > 0) {
-          console.log(`Sending notifications to ${editors.length} editors...`);
+          console.log(`📧 Mengirim notifikasi ke ${editors.length} editor...`);
           
-          // 2. Kirim email ke setiap editor (gunakan Promise.all agar paralel)
-          // Kita tidak menggunakan 'await' pada Promise.all ini agar response ke user 
-          // tidak tertunda jika pengiriman email lambat (Fire and Forget)
-          Promise.all(editors.map(editor => 
-            sendDraftReviewNotification(
-              editor.email,
-              editor.name,
-              article.title,
-              author.name,
-              article._id
-            )
-          )).catch(err => console.error('Error sending bulk emails:', err));
+          await Promise.all(editors.map(editor => {
+            if (editor.email) {
+              return sendDraftReviewNotification(
+                editor.email,
+                editor.name,
+                article.title,
+                author.name,
+                article._id
+              );
+            }
+          }));
         }
       } catch (emailError) {
-        // Error handling khusus email agar tidak mengganggu response sukses pembuatan artikel
-        console.error('Failed to initiate email notification flow:', emailError);
+        console.error("⚠️ Gagal mengirim notifikasi email:", emailError);
       }
     }
 
@@ -454,6 +453,47 @@ const updateArticle = catchAsyncErrors(async (req, res, next) => {
     // Persiapan Update Data
     const oldStatus = article.status;
     const newStatus = req.body.status;
+
+    if (newStatus === 'pending review' && oldStatus !== 'pending review') {
+      try {
+        const author = await User.findById(article.author); 
+        const editors = await User.find({ role: 'editor' });
+
+        if (editors.length > 0) {
+          // console.log(`📧 (Update) Mengirim notifikasi ke ${editors.length} editor...`);
+          await Promise.all(editors.map(editor => {
+            if (editor.email) {
+              return sendDraftReviewNotification(
+                editor.email,
+                editor.name,
+                article.title,
+                author.name,
+                article._id
+              );
+            }
+          }));
+        }
+
+        if (newStatus !== oldStatus && req.user.role === 'editor' ) {
+          if (newStatus === 'published' || newStatus === 'rejected') {
+            try {
+              await sendArticleStatusNotification(
+                author.email,
+                author.name,
+                article.title,
+                newStatus,
+                article._id,
+                feedback 
+              );
+            } catch (err) {
+              console.error("Email status notification error:", err);
+            }
+          }
+        }
+      } catch (emailError) {
+        console.error("⚠️ Gagal mengirim notifikasi email (Update):", emailError);
+      }
+    }
     
     // Set publishedAt jika status berubah jadi published
     if (oldStatus !== 'published' && newStatus === 'published') {

@@ -43,11 +43,23 @@ const forgotPassword = async (req, res, next) => {
 const resetPassword = async (req, res) => {
   try {
     const rawToken = req.params.token;
+    
+    // 1. Validasi Input Dasar
+    // Pastikan password dikirim (Mencegah error 'undefined')
+    if (!req.body.password || !req.body.confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password dan Konfirmasi Password wajib diisi.'
+      });
+    }
+
+    // 2. Hash token dari URL
     const resetPasswordToken = crypto
       .createHash('sha256')
       .update(rawToken)
       .digest('hex');
 
+    // 3. Cari user
     const user = await User.findOne({
       resetPasswordToken: resetPasswordToken,
       resetPasswordExpire: { $gt: Date.now() }
@@ -60,17 +72,20 @@ const resetPassword = async (req, res) => {
       });
     }
 
+    // 4. Cek kecocokan password
     if (req.body.password !== req.body.confirmPassword) {
       return res.status(400).json({
         success: false,
-        message: 'Password konfirmasi tidak cocok.'
+        message: 'Password dan konfirmasi tidak cocok.'
       });
     }
 
+    // 5. Update password
     user.password = req.body.password;
-    
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
+    
+    // Gunakan save() normal agar hook hashing di User.js berjalan
     await user.save();
 
     res.status(200).json({
@@ -79,53 +94,64 @@ const resetPassword = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Reset Password Error:", error);
-    res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+    // Log error detail ke terminal backend agar ketahuan jika ada validasi lain yg gagal (misal: nama kosong)
+    console.error("❌ RESET PASSWORD ERROR:", error);
+    
+    // Kirim pesan error spesifik jika itu error validasi Mongoose
+    if (error.name === 'ValidationError') {
+       const messages = Object.values(error.errors).map(val => val.message);
+       return res.status(400).json({ success: false, message: messages.join(', ') });
+    }
+
+    res.status(500).json({ success: false, message: 'Terjadi kesalahan server.' });
   }
 };
 
 // Verify Reset Token - Check if token is valid
-// const verifyResetToken = async (req, res) => {
-//   try {
-//     const { token } = req.params;
+const verifyResetToken = async (req, res) => {
+  try {
+    const { token } = req.params;
 
-//     if (!token) {
-//       return res.status(400).json({
-//         success: false,
-//         message: 'Token diperlukan'
-//       });
-//     }
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token diperlukan'
+      });
+    }
 
-//     // Find valid reset token
-//     const resetTokenDoc = await ResetToken.findOne({
-//       token,
-//       used: false,
-//       expiresAt: { $gt: new Date() }
-//     });
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
 
-//     if (!resetTokenDoc) {
-//       return res.status(400).json({
-//         success: false,
-//         message: 'Token tidak valid atau sudah kadaluarsa'
-//       });
-//     }
+    const user = await User.findOne({
+      resetPasswordToken: resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
 
-//     res.json({
-//       success: true,
-//       message: 'Token valid'
-//     });
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token tidak valid atau sudah kadaluarsa'
+      });
+    }
 
-//   } catch (error) {
-//     console.error('Verify reset token error:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Terjadi kesalahan saat memverifikasi token'
-//     });
-//   }
-// };
+    res.json({
+      success: true,
+      message: 'Token valid'
+    });
+
+  } catch (error) {
+    console.error('Verify reset token error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan saat memverifikasi token'
+    });
+  }
+};
 
 module.exports = {
   forgotPassword,
   resetPassword,
-  // verifyResetToken
+  verifyResetToken
 };
